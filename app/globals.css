@@ -1,0 +1,87 @@
+/* Path: app/globals.css (replace the entire file with this) */
+@import "tailwindcss";
+
+@theme {
+  --color-page: #f3f8f8;
+  --color-ink: #0b2b33;
+  --color-muted: #567079;
+  --color-line: #d6e5e7;
+  --color-tint: #e2f1f0;
+  --color-brand: #0b7a82;
+  --color-brand-dark: #06454c;
+  --color-mint: #8fe3d3;
+}
+
+body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+.font-display {
+  font-family: var(--font-display), system-ui, sans-serif;
+}
+.wrap {
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 768px) {
+  .wrap {
+    padding-inline: 2rem;
+  }
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 3px;
+}
+.on-dark :focus-visible {
+  outline-color: var(--color-mint);
+}
+
+/* Hero eye animation */
+.eye-part {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.eye-blink {
+  animation: eye-blink 6s ease-in-out infinite;
+}
+.eye-look {
+  animation: eye-look 9s ease-in-out infinite;
+}
+.eye-pupil {
+  animation: eye-pupil 4.5s ease-in-out infinite;
+}
+.eye-ring {
+  animation: eye-ring 4.8s ease-out infinite;
+}
+.eye-float {
+  animation: eye-float 6s ease-in-out infinite;
+}
+
+@keyframes eye-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(0.06); }
+}
+@keyframes eye-look {
+  0%, 100% { transform: translate(0, 0); }
+  22% { transform: translate(-18px, 2px); }
+  48% { transform: translate(16px, -5px); }
+  72% { transform: translate(0, 4px); }
+}
+@keyframes eye-pupil {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+@keyframes eye-ring {
+  0% { transform: scale(0.82); opacity: 0.55; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+@keyframes eye-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eye-blink, .eye-look, .eye-pupil, .eye-ring, .eye-float {
+    animation: none;
+  }
+}
