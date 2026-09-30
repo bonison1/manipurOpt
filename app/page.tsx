@@ -39,7 +39,7 @@ export default function Home() {
       <ScrollEye />
 
       {/* Hero */}
-      <section className="wrap grid items-center gap-12 py-14 md:py-24 lg:grid-cols-[1.1fr_1fr]">
+      <section className="wrap relative grid items-center gap-12 py-14 md:py-24 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <h1 className="font-display text-[2.4rem] font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.4rem]">
             <span className="block">Advancing optometry.</span>
@@ -55,8 +55,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Slot: the eye starts here */}
-        <div data-eye-slot="hero" aria-hidden="true" className="mx-auto aspect-square w-full max-w-md" />
+        {/* Slot: the eye starts here.
+            Phone: small eye at the top-right, beside the first two lines only (clear of "vision.").
+            md and up: the original large slot in the grid. */}
+        <div
+          data-eye-slot="hero"
+          aria-hidden="true"
+          className="absolute right-5 top-8 h-[clamp(7rem,40vw,5.5rem)] w-[clamp(7rem,40vw,5.5rem)] md:static md:mx-auto md:aspect-square md:h-auto md:w-full md:max-w-md"
+        />
       </section>
 
       {/* What we do */}

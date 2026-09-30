@@ -108,8 +108,9 @@ function EyeArt({ labelsRef }: { labelsRef?: React.Ref<HTMLDivElement> }) {
         ))}
       </svg>
 
-      {/* Chips (fade out as the eye shrinks in scroll mode) */}
-      <div ref={labelsRef} aria-hidden="true">
+      {/* Chips: fade out as the eye shrinks in scroll mode.
+          Hidden on phones, where the eye is a small icon-sized graphic. */}
+      <div ref={labelsRef} aria-hidden="true" className="hidden md:block">
         <div className="eye-float absolute right-0 top-8 rounded-2xl border border-line bg-white px-4 py-2.5 shadow-[0_12px_30px_-18px_rgba(11,122,130,0.6)]">
           <div className="text-xs text-muted">Goal</div>
           <div className="font-display text-sm font-bold text-brand-dark">Clear vision for all</div>

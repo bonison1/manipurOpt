@@ -17,22 +17,25 @@ const team: Member[] = [
 
 export function Leadership() {
   return (
-    <div className="flex flex-wrap justify-center gap-8 md:gap-10">
+    // Always 3 columns, so the photos stay in a single line, even on phones
+    <div className="mx-auto grid max-w-xl grid-cols-3 gap-2.5 sm:gap-6 md:max-w-3xl md:gap-10">
       {team.map((m) => (
-        <figure key={m.role} className="w-36 text-center sm:w-40 md:w-48">
-          <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-line bg-tint">
+        <figure key={m.role} className="mx-auto w-full min-w-0 text-center md:max-w-48">
+          <div className="relative aspect-[4/5] overflow-hidden rounded-xl border border-line bg-tint sm:rounded-2xl">
             <Image
               src={m.photo}
               alt={`${m.name}, ${m.role}`}
               fill
-              sizes="192px"
+              sizes="(min-width: 768px) 192px, 30vw"
               className="object-cover"
               style={{ objectPosition: m.focus }}
             />
           </div>
-          <figcaption className="mt-3">
-            <div className="text-sm font-medium text-brand">{m.role}</div>
-            <div className="font-display text-base font-bold leading-snug">{m.name}</div>
+          <figcaption className="mt-2 sm:mt-3">
+            <div className="text-[11px] font-medium text-brand sm:text-sm">{m.role}</div>
+            <div className="break-words font-display text-xs font-bold leading-snug sm:text-base">
+              {m.name}
+            </div>
           </figcaption>
         </figure>
       ))}
