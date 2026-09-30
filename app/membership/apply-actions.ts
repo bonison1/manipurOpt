@@ -235,9 +235,13 @@ export async function saveStep(step: number, formData: FormData): Promise<StepRe
 // Next.js server actions / Vercel cap request bodies at ~4.5 MB, so a 10 MB PDF is uploaded
 // from the browser directly to Supabase Storage using a one-time signed upload URL.
 
-export async function createDocumentUpload(): Promise<
-  { ok: true; bucket: string; path: string; token: string } | { ok: false; message: string }
-> {
+export async function createDocumentUpload(): Promise<{
+  ok: boolean;
+  message?: string;
+  bucket?: string;
+  path?: string;
+  token?: string;
+}> {
   const draft = await currentDraft();
   if (!draft) return { ok: false, message: SESSION_ENDED };
   if (Number(draft.draft_step) < 3) return { ok: false, message: 'Please complete the earlier steps first.' };

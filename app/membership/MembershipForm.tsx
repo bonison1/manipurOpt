@@ -402,7 +402,8 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
     if (!file) return true; // keep the file that was already uploaded
 
     const up = await createDocumentUpload();
-    if (!up.ok) {
+    // FIX: check every field explicitly (works with or without TypeScript "strict")
+    if (!up.ok || !up.bucket || !up.path || !up.token) {
       applyServerFailure(up);
       return false;
     }
