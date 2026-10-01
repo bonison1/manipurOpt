@@ -124,8 +124,6 @@ export default async function Home() {
         </div>
       </section>
 
-      
-
       {/* What we do */}
       <section className="wrap pb-16 pt-6 md:pb-20">
         <h2 className="mb-8 text-center font-display text-3xl font-extrabold md:text-4xl">
@@ -146,10 +144,6 @@ export default async function Home() {
           ))}
         </div>
       </section>
-
-      
-
-      
 
       {/* Events and news */}
       <section className="wrap grid gap-6 pb-16 md:pb-20 lg:grid-cols-2">
@@ -248,7 +242,7 @@ export default async function Home() {
         </div>
       </section>
 
-{/* Leadership */}
+      {/* Leadership */}
       <section className="wrap pb-16 text-center md:pb-20">
         <h2 className="font-display text-3xl font-extrabold md:text-4xl">
           Our leadership
@@ -265,39 +259,41 @@ export default async function Home() {
           About MOA
         </Link>
       </section>
-      
+
       {/* Closing call to action */}
-      <section className="wrap pb-16 md:pb-24">
-        <div className="on-dark flex flex-col items-start justify-between gap-10 rounded-3xl bg-brand-dark p-8 text-white md:flex-row md:items-center md:p-12">
-          <div>
-            <h2 className="max-w-xl font-display text-3xl font-bold leading-tight md:text-4xl">
+      <section className="wrap pb-12 md:pb-24">
+        <div className="on-dark flex flex-col-reverse items-center gap-6 rounded-3xl bg-brand-dark p-6 text-center text-white sm:p-8 md:flex-row md:justify-between md:gap-10 md:p-12 md:text-left">
+          <div className="w-full md:w-auto">
+            <h2 className="mx-auto max-w-xl font-display text-2xl font-bold leading-tight sm:text-3xl md:mx-0 md:text-4xl">
               Optometrist, student or practitioner in Manipur? Join MOA.
             </h2>
 
-            <div className="mt-6">
+            <div className="mt-6 flex justify-center md:justify-start [&>a]:w-full sm:[&>a]:w-auto">
               <Cta href="/membership" variant="mint">
                 Become a member
               </Cta>
             </div>
           </div>
 
-          
-
           {/* MOA logo */}
           <div className="flex shrink-0 items-center justify-center md:pr-6">
-            <img
+            <Image
               src="/logo1.png"
               alt="Manipur Optometrist Association"
-              className="h-60 w-60 object-contain md:h-60 md:w-60"
+              width={240}
+              height={240}
+              className="h-28 w-28 object-contain sm:h-40 sm:w-40 md:h-60 md:w-60"
             />
           </div>
-
-          {/* Gallery banner (fades from one photo to the next) */}
-      <div className="pt-4">
-        <GalleryBanner photos={bannerPhotos} />
-      </div>
         </div>
       </section>
+
+      {/* Gallery banner (fades from one photo to the next), full width */}
+      {/* Gallery banner (fades from one photo to the next) */}
+<section className="w-full pb-6 md:pb-16">
+  <GalleryBanner photos={bannerPhotos} />
+</section>
+      
     </>
   );
 }

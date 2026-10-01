@@ -124,29 +124,29 @@ export default function Header({ initialMe }: { initialMe?: Me }) {
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       {/* Top row: logo left, actions right */}
-      <div className="wrap flex h-20 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-3">
+      <div className="wrap flex h-20 items-center justify-between gap-2 sm:gap-4">
+        <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           <Image
             src="/logo.jpg"
             alt="Manipur Optometrist Association logo"
             width={56}
             height={56}
             priority
-            className="h-14 w-14 object-contain"
+            className="h-12 w-12 shrink-0 object-contain sm:h-14 sm:w-14"
           />
-          <span className="border-l border-ink/30 pl-3 font-serif text-xs font-semibold uppercase leading-snug sm:text-sm">
+          <span className="border-l border-ink/30 pl-2 font-serif text-[10px] font-semibold uppercase leading-snug sm:pl-3 sm:text-sm">
             Manipur Optometrist
             <br />
             Association
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {me ? (
             <>
               <Link
                 href={profileHref}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-dark px-3 py-2 text-xs font-semibold text-white hover:bg-brand sm:px-4 sm:py-2.5 sm:text-sm"
               >
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-xs font-bold text-brand-dark">
                   {initial}
@@ -172,9 +172,10 @@ export default function Header({ initialMe }: { initialMe?: Me }) {
               </Link>
               <Link
                 href="/membership"
-                className="rounded-lg bg-brand-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand"
+                className="whitespace-nowrap rounded-lg bg-brand-dark px-3 py-2 text-xs font-semibold text-white hover:bg-brand sm:px-4 sm:py-2.5 sm:text-sm"
               >
-                Become a member
+                <span className="sm:hidden">Join</span>
+                <span className="hidden sm:inline">Become a member</span>
               </Link>
             </>
           )}
@@ -182,7 +183,7 @@ export default function Header({ initialMe }: { initialMe?: Me }) {
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="grid h-10 w-10 place-items-center rounded-lg bg-brand-dark text-white lg:hidden"
+            className="grid h-9 w-9 place-items-center rounded-lg bg-brand-dark text-white sm:h-10 sm:w-10 lg:hidden"
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
             aria-controls="mobile-nav"
