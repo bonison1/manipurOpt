@@ -1,7 +1,7 @@
 // Path: app/membership/track/page.tsx
 import type { Metadata } from 'next';
-import { PageHero } from '@/components/Page';
-import { Card } from '@/components/ui';
+import { PageHero } from '@/components/PageHero';
+import { PageBody, Panel } from '@/components/form-ui';
 import TrackForm from './TrackForm';
 import { getTrackIdentity } from './track-data';
 
@@ -16,6 +16,7 @@ export default async function TrackPage() {
   return (
     <>
       <PageHero
+        align="center"
         title="Track your application"
         subtitle={
           signedInEmail
@@ -23,13 +24,11 @@ export default async function TrackPage() {
             : 'Log in to see your status automatically, or enter your registration number and email.'
         }
       />
-      <div className="container py-16">
-        <div className="mx-auto max-w-2xl">
-          <Card>
-            <TrackForm member={application} signedIn={!!signedInEmail} />
-          </Card>
-        </div>
-      </div>
+      <PageBody width="max-w-2xl">
+        <Panel>
+          <TrackForm member={application} signedIn={!!signedInEmail} />
+        </Panel>
+      </PageBody>
     </>
   );
 }

@@ -1,18 +1,45 @@
 // Path: app/admin/login/page.tsx
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { Card } from '@/components/ui';
+import RefreshOnShow from '@/components/RefreshOnShow';
+import { createSupabaseServer } from '@/lib/auth/supabase-server';
+import { checkIsAdmin } from '@/lib/auth/is-admin';
 import LoginForm from './LoginForm';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Admin Login | MOA' };
 
-export default function AdminLoginPage() {
+// Only allow redirects to pages inside /admin (prevents open redirects).
+function safeNext(value?: string) {
+  if (!value) return '/admin';
+  const inAdmin = value === '/admin' || value.startsWith('/admin/');
+  return inAdmin && !value.startsWith('/admin/login') ? value : '/admin';
+}
+
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
+  // Already logged in as an admin? Skip the login form. They stay logged in until they press Sign out.
+  const supabase = await createSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user && (await checkIsAdmin(supabase, user.email))) redirect(safeNext(next));
+
   return (
     <div className="container py-16">
+      {/* Back button on a cached copy: re-check on the server */}
+      <RefreshOnShow />
       <div className="mx-auto max-w-md">
         <h1 className="mb-2 text-3xl font-black text-[#073b66]">Admin login</h1>
         <p className="mb-6 text-sm text-slate-500">Authorised MOA administrators only.</p>
         <Card>
-          <LoginForm />
+          <LoginForm next={next} />
         </Card>
       </div>
     </div>

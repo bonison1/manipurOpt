@@ -17,13 +17,13 @@ import {
 } from './constants';
 import { clearApplySession, setApplySession } from './apply-session';
 import { getCurrentApplicationId } from './apply-data';
+import { startDraftSession } from './apply-resume';
+import { ensureAuthUser } from './member-session';
 
 const TABLE = 'membership_applications';
-const MAX_ATTEMPTS = 5;
-const LOCK_MINUTES = 15;
 
 const SESSION_ENDED =
-  'Your session has ended. Use “Continue application” with your email and date of birth to carry on.';
+  'Your session has ended. Log in with your email and date of birth to carry on.';
 
 const clean = (v: unknown) => String(v ?? '').trim();
 
@@ -162,7 +162,10 @@ export async function saveStep(step: number, formData: FormData): Promise<StepRe
 
   const get = (k: string) => clean(formData.get(k));
   const db = createServiceClient();
-  const draft = await currentDraft();
+  // A blank form (nothing saved in this page yet) always starts a NEW application; it never picks up an
+  // earlier draft from the cookie. To continue an old one the member logs in.
+  const startsNew = step === 0 && clean(formData.get('is_new')) === '1';
+  const draft = startsNew ? null : await currentDraft();
 
   if (!draft && step !== 0) return { ok: false, message: SESSION_ENDED, resume: true };
   if (draft && step > Number(draft.draft_step)) {
@@ -186,7 +189,7 @@ export async function saveStep(step: number, formData: FormData): Promise<StepRe
       return existing.is_draft
         ? {
             ok: false,
-            message: 'You have already started an application with this email.',
+            message: 'You have already started an application with this email. Log in to continue it.',
             errors: { email: 'An unfinished application exists for this email.' },
             resume: true,
           }
@@ -209,6 +212,10 @@ export async function saveStep(step: number, formData: FormData): Promise<StepRe
       console.error('draft insert failed:', error);
       return { ok: false, message: 'Something went wrong while saving. Please try again.' };
     }
+
+    // Step 1 done = account created (no password yet; they set one from the dashboard).
+    // If this fails, signing in with email + date of birth creates the account later.
+    await ensureAuthUser(values.email as string);
 
     await setApplySession(data.id);
     return { ok: true, applicationNo: data.application_no };
@@ -340,7 +347,9 @@ export async function finalizeApplication(formData: FormData): Promise<FormState
     return { ok: false, message: 'Something went wrong while submitting. Please try again.' };
   }
 
-  await clearApplySession();
+  // Do NOT clear the cookie here: changing cookies makes Next.js re-render /membership/apply, and with a
+  // submitted application the page would redirect away and the success / payment card would vanish.
+  // The cookie is cleared by Exit / Logout, and a submitted application is never treated as a draft anyway.
   return { ok: true, applicationNo: draft.application_no, feeAmount, email: draft.email };
 }
 
@@ -351,42 +360,10 @@ export async function resumeApplication(_prev: ResumeState, formData: FormData):
   const dob = clean(formData.get('date_of_birth'));
   if (!email || !dob) return { error: 'Enter your email and date of birth.' };
 
-  const generic =
-    'We could not find an unfinished application with those details. Check them and try again.';
+  const result = await startDraftSession(email, dob);
+  if (!result.ok) return { error: result.error };
 
-  const db = createServiceClient();
-  const { data: app } = await db
-    .from(TABLE)
-    .select('id, date_of_birth, resume_failed_attempts, resume_locked_until')
-    .eq('email', email)
-    .eq('is_draft', true)
-    .maybeSingle();
-
-  if (!app) return { error: generic };
-
-  if (app.resume_locked_until && new Date(app.resume_locked_until) > new Date()) {
-    return { error: `Too many attempts. Please wait ${LOCK_MINUTES} minutes and try again.` };
-  }
-
-  if (String(app.date_of_birth) !== dob) {
-    const attempts = Number(app.resume_failed_attempts ?? 0) + 1;
-    await db
-      .from(TABLE)
-      .update(
-        attempts >= MAX_ATTEMPTS
-          ? {
-              resume_failed_attempts: 0,
-              resume_locked_until: new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString(),
-            }
-          : { resume_failed_attempts: attempts }
-      )
-      .eq('id', app.id);
-    return { error: generic };
-  }
-
-  await db.from(TABLE).update({ resume_failed_attempts: 0, resume_locked_until: null }).eq('id', app.id);
-  await setApplySession(app.id);
-  redirect('/membership/apply');
+  redirect('/membership/apply?resume=1');
 }
 
 export async function exitApplication() {

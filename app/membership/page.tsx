@@ -76,11 +76,12 @@ export default function Membership() {
   return (
     <>
       <PageHero
+        align="center"
         title="Become part of Manipur’s optometry community"
         subtitle="Connect, learn, contribute and grow with optometry professionals across Manipur."
       >
         <Cta href="/membership/apply">Register now</Cta>
-        <Cta href="/membership/apply/resume" variant="ghost">Continue application</Cta>
+        <Cta href="/membership/login" variant="ghost">Member login</Cta>
         <Link
           href="/membership/track"
           className="px-2 text-sm font-semibold text-brand hover:text-brand-dark hover:underline"
@@ -91,7 +92,7 @@ export default function Membership() {
 
       {/* Benefits */}
       <section className="wrap py-14 md:py-20">
-        <h2 className="font-display text-2xl font-bold md:text-3xl">Membership benefits</h2>
+        <h2 className="text-center font-display text-2xl font-bold md:text-3xl">Membership benefits</h2>
         <ul className="mt-6 grid gap-x-10 sm:grid-cols-2">
           {benefits.map((b) => (
             <li key={b} className="flex items-center gap-3 border-b border-line py-4">
@@ -107,8 +108,10 @@ export default function Membership() {
       {/* Process */}
       <section id="process" className="border-y border-line bg-white">
         <div className="wrap py-14 md:py-20">
-          <h2 className="font-display text-2xl font-bold md:text-3xl">How to register</h2>
-          <p className="mt-2 text-muted">Six short steps, from payment to approval.</p>
+          <div className="text-center">
+            <h2 className="font-display text-2xl font-bold md:text-3xl">How to register</h2>
+            <p className="mt-2 text-muted">Six short steps, from payment to approval.</p>
+          </div>
 
           <div className="mt-8 grid items-start gap-8 lg:grid-cols-3">
             <ol className="divide-y divide-line overflow-hidden rounded-3xl border border-line lg:col-span-2">
@@ -151,8 +154,12 @@ export default function Membership() {
 
       {/* Categories */}
       <section className="wrap py-14 md:py-20">
-        <h2 className="font-display text-2xl font-bold md:text-3xl">Membership categories</h2>
-        <p className="mt-2 text-muted">Eligibility details will be published with the official membership policy.</p>
+        <div className="text-center">
+          <h2 className="font-display text-2xl font-bold md:text-3xl">Membership categories</h2>
+          <p className="mx-auto mt-2 max-w-xl text-muted">
+            Eligibility details will be published with the official membership policy.
+          </p>
+        </div>
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
             <div key={c.title} className="rounded-3xl border border-line bg-white p-6">

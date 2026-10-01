@@ -5,17 +5,33 @@ export function PageHero({
   title,
   subtitle,
   children,
+  align = 'left',
 }: {
   title: string;
   subtitle: string;
   children?: React.ReactNode;
+  align?: 'left' | 'center';
 }) {
+  const center = align === 'center';
+
   return (
     <section className="border-b border-line bg-white">
       <div className="wrap py-14 md:py-20">
-        <h1 className="max-w-3xl font-display text-4xl font-extrabold tracking-tight md:text-5xl">{title}</h1>
-        <p className="mt-4 max-w-xl text-lg leading-8 text-muted">{subtitle}</p>
-        {children && <div className="mt-8 flex flex-wrap items-center gap-3">{children}</div>}
+        <h1
+          className={`max-w-3xl font-display text-4xl font-extrabold tracking-tight md:text-5xl ${
+            center ? 'mx-auto text-center' : ''
+          }`}
+        >
+          {title}
+        </h1>
+        <p className={`mt-4 max-w-xl text-lg leading-8 text-muted ${center ? 'mx-auto text-center' : ''}`}>
+          {subtitle}
+        </p>
+        {children && (
+          <div className={`mt-8 flex flex-wrap items-center gap-3 ${center ? 'justify-center' : ''}`}>
+            {children}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -9,8 +9,10 @@ export const metadata: Metadata = {
   description: 'Photos from MOA events, CME programs and community outreach.',
 };
 
-export default function GalleryPage() {
-  const images = getGalleryImages();
+export const revalidate = 60;
+
+export default async function GalleryPage() {
+  const images = await getGalleryImages();
 
   return (
     <>

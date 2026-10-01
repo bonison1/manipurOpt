@@ -23,12 +23,16 @@ import {
   type FormState,
 } from './constants';
 import PayButton from './PayButton';
+import { inputCls as baseInputCls, linkCls } from '@/components/form-ui';
 import { inr } from '@/lib/format';
 
-const inputCls =
-  'w-full rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20 aria-[invalid=true]:border-red-500';
+const inputCls = `${baseInputCls} aria-[invalid=true]:border-red-500`;
 const fileCls =
-  'w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-normal text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-3 file:py-2 file:font-semibold file:text-[#0d9488] aria-[invalid=true]:border-red-500';
+  'w-full rounded-xl border border-line bg-white px-3 py-2 text-sm font-normal file:mr-3 file:rounded-full file:border-0 file:bg-tint file:px-4 file:py-2 file:font-semibold file:text-brand-dark aria-[invalid=true]:border-red-500';
+const ghostBtn =
+  'inline-flex items-center justify-center rounded-full border border-brand/30 bg-white px-6 py-3 text-sm font-semibold text-brand-dark transition-colors hover:border-brand hover:bg-tint disabled:invisible';
+const solidBtn =
+  'inline-flex items-center justify-center rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60';
 
 /* ───────── Steps ───────── */
 
@@ -128,7 +132,7 @@ function Field({
       <span>
         {label}
         {required && <span className="text-red-500"> *</span>}
-        {hint && <span className="ml-1 text-xs font-normal text-slate-500">{hint}</span>}
+        {hint && <span className="ml-1 text-xs font-normal text-muted">{hint}</span>}
       </span>
       {children}
       <FieldError id={`${name}-error`} message={error} />
@@ -139,8 +143,8 @@ function Field({
 function Stepper({ step, onJump }: { step: number; onJump: (i: number) => void }) {
   return (
     <nav aria-label="Application progress" className="mb-8">
-      <p className="mb-3 text-sm font-semibold text-slate-600 md:hidden">
-        Step {step + 1} of {STEPS.length}: <span className="text-[#073b66]">{STEPS[step].title}</span>
+      <p className="mb-3 text-sm font-semibold text-muted md:hidden">
+        Step {step + 1} of {STEPS.length}: <span className="text-ink">{STEPS[step].title}</span>
       </p>
       <ol className="flex items-center">
         {STEPS.map((s, i) => {
@@ -158,17 +162,17 @@ function Stepper({ step, onJump }: { step: number; onJump: (i: number) => void }
                 <span
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition ${
                     done
-                      ? 'border-[#0d9488] bg-[#0d9488] text-white'
+                      ? 'border-brand bg-brand text-white'
                       : current
-                        ? 'border-[#0d9488] bg-white text-[#0d9488]'
-                        : 'border-slate-300 bg-white text-slate-400'
+                        ? 'border-brand bg-white text-brand'
+                        : 'border-line bg-white text-muted'
                   }`}
                 >
                   {done ? '✓' : i + 1}
                 </span>
                 <span
                   className={`hidden text-sm font-semibold md:inline ${
-                    current ? 'text-[#073b66]' : done ? 'text-[#0d9488]' : 'text-slate-400'
+                    current ? 'text-ink' : done ? 'text-brand' : 'text-muted'
                   }`}
                 >
                   {s.title}
@@ -177,7 +181,7 @@ function Stepper({ step, onJump }: { step: number; onJump: (i: number) => void }
               {i < LAST && (
                 <span
                   aria-hidden="true"
-                  className={`mx-2 h-0.5 flex-1 rounded ${i < step ? 'bg-[#0d9488]' : 'bg-slate-200'}`}
+                  className={`mx-2 h-0.5 flex-1 rounded ${i < step ? 'bg-brand' : 'bg-line'}`}
                 />
               )}
             </li>
@@ -213,31 +217,29 @@ function SuccessCard({
   return (
     <div className="grid gap-6 text-center">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-[#0d9488]">
-          Application submitted
-        </p>
-        <h3 className="mt-2 text-2xl font-black text-[#073b66]">Your registration number</h3>
-        <p className="mt-4 inline-block rounded-2xl border border-dashed border-[#0d9488] bg-teal-50 px-6 py-4 font-mono text-3xl font-bold tracking-wider text-[#073b66]">
+        <p className="text-sm font-semibold text-brand">Application submitted</p>
+        <h3 className="mt-2 font-display text-2xl font-bold">Your registration number</h3>
+        <p className="mt-4 inline-block rounded-2xl border border-dashed border-brand bg-tint px-6 py-4 font-mono text-3xl font-bold tracking-wider">
           {applicationNo}
         </p>
         <div className="mt-3">
-          <button type="button" onClick={copy} className="text-sm font-semibold text-[#0d9488] hover:underline">
+          <button type="button" onClick={copy} className={`text-sm ${linkCls}`}>
             {copied ? 'Copied ✓' : 'Copy number'}
           </button>
         </div>
-        <p className="mt-3 text-sm text-slate-600">
+        <p className="mt-3 text-sm text-muted">
           Save this number. You will need it together with your email ({email}) to track your application.
         </p>
       </div>
 
       {paid ? (
-        <p className="rounded-xl bg-emerald-50 px-4 py-3 font-semibold text-emerald-800">
+        <p className="rounded-2xl bg-tint px-4 py-3 font-semibold text-brand-dark">
           Payment proof for {inr(feeAmount)} submitted. Your application is now waiting for admin approval.
         </p>
       ) : (
-        <div className="rounded-xl bg-slate-50 px-4 py-5">
-          <p className="text-sm text-slate-600">
-            Membership fee: <strong>{inr(feeAmount)}</strong>. Your application is reviewed once the fee is paid.
+        <div className="rounded-2xl bg-tint px-4 py-5">
+          <p className="text-sm text-muted">
+            Membership fee: <strong className="text-ink">{inr(feeAmount)}</strong>. Your application is reviewed once the fee is paid.
           </p>
           <div className="mt-4 flex justify-center">
             <PayButton applicationNo={applicationNo} email={email} amount={feeAmount} onPaid={() => setPaid(true)} />
@@ -246,10 +248,10 @@ function SuccessCard({
       )}
 
       <div className="grid gap-2 text-sm">
-        <Link href="/membership/signup" className="font-semibold text-[#0d9488] hover:underline">
-          Create your member account (to log in later) →
+        <Link href="/membership/login" className={linkCls}>
+          Log in to your member dashboard →
         </Link>
-        <Link href="/membership/track" className="font-semibold text-[#0d9488] hover:underline">
+        <Link href="/membership/track" className={linkCls}>
           Track your application status →
         </Link>
       </div>
@@ -386,7 +388,7 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
       if (typeof v === 'string') fd.set(name, v);
     });
     fd.set('website', String(all.get('website') ?? ''));
-
+    fd.set('is_new', applicationNo ? '' : '1'); // nothing saved yet in this page => brand-new application
     const res = await saveStep(i, fd);
     if (!res.ok) {
       applyServerFailure(res);
@@ -575,19 +577,15 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
       </div>
 
       {applicationNo && (
-        <div className="mb-6 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-slate-700">
+        <div className="mb-6 rounded-2xl bg-tint px-4 py-3 text-sm">
           <p>
-            Registration no.: <strong className="font-mono text-[#073b66]">{applicationNo}</strong>
+            Registration no.: <strong className="font-mono">{applicationNo}</strong>
           </p>
-          <p className="mt-1">
+          <p className="mt-1 text-muted">
             Your progress is saved after every step. You can leave and come back any time — choose{' '}
-            <strong>Continue application</strong> and enter your email and date of birth.
+            <strong className="text-ink">Member login</strong> and use your email and date of birth.
           </p>
-          <button
-            type="button"
-            onClick={() => void exitApplication()}
-            className="mt-2 font-semibold text-[#0d9488] hover:underline"
-          >
+          <button type="button" onClick={() => void exitApplication()} className={`mt-2 ${linkCls}`}>
             Exit (saved steps are kept)
           </button>
         </div>
@@ -595,7 +593,7 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
 
       <Stepper step={step} onJump={jumpTo} />
 
-      <h3 className="mb-5 text-xl font-black text-[#073b66]">{STEPS[step].heading}</h3>
+      <h3 className="mb-5 font-display text-xl font-bold">{STEPS[step].heading}</h3>
 
       {/* All steps stay mounted (just hidden) so typed values persist between steps. */}
 
@@ -609,8 +607,8 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
           pattern: '[0-9]{10}', placeholder: '10-digit WhatsApp number',
         })}
         {txt('email', 'Email Address', { type: 'email', inputMode: 'email', autoComplete: 'email', span: true })}
-        <p className="text-xs text-slate-500 md:col-span-2">
-          Your email and date of birth are what you will use to continue this application later.
+        <p className="text-xs text-muted md:col-span-2">
+          Your account is created when you save this step. Log in later with your email and date of birth to continue, and set a password from your dashboard.
         </p>
       </div>
 
@@ -654,19 +652,19 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
           <legend className="mb-2">
             Are you an independent optometry practitioner? <span className="text-red-500">*</span>
           </legend>
-          <label className="flex items-center gap-2 font-normal text-slate-700">
+          <label className="flex items-center gap-2 font-normal">
             <input
               type="radio" name="is_independent_practitioner" value="yes" required
               defaultChecked={dv('is_independent_practitioner') === 'yes'}
-              className="h-4 w-4 accent-[#0d9488]"
+              className="h-4 w-4 accent-brand"
             />
             Yes, I am an independent practitioner
           </label>
-          <label className="flex items-center gap-2 font-normal text-slate-700">
+          <label className="flex items-center gap-2 font-normal">
             <input
               type="radio" name="is_independent_practitioner" value="no"
               defaultChecked={dv('is_independent_practitioner') === 'no'}
-              className="h-4 w-4 accent-[#0d9488]"
+              className="h-4 w-4 accent-brand"
             />
             No, I don&apos;t practice independently
           </label>
@@ -704,13 +702,13 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
           name="documents_file" label="Upload All Documents" required={!documentsName}
           error={errors.documents_file} className="md:col-span-2"
         >
-          <span className="text-xs font-normal text-slate-500">
+          <span className="text-xs font-normal text-muted">
             Passport photo, Aadhaar, birth certificate, Voter ID, HS Science marksheet, all B.Optom
             marksheets, internship completion certificate and B.Optom degree certificate — merged into
             a single PDF, up to 10MB.
           </span>
           {documentsName && (
-            <span className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-normal text-emerald-800">
+            <span className="rounded-xl bg-tint px-3 py-2 text-xs font-normal text-brand-dark">
               Uploaded: <strong>{documentsName}</strong>. Choose a new file only if you want to replace it.
             </span>
           )}
@@ -719,33 +717,33 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
             aria-invalid={inv('documents_file')} aria-describedby={desc('documents_file')} className={fileCls}
           />
         </Field>
-        <p className="text-sm text-slate-600 md:col-span-2">
-          Payment is done <strong>after</strong> you submit — you will see the QR / bank details and can
+        <p className="text-sm text-muted md:col-span-2">
+          Payment is done <strong className="text-ink">after</strong> you submit — you will see the QR / bank details and can
           upload your payment proof then.
         </p>
       </div>
 
       {/* ───────── Step 5: Review & consent ───────── */}
       <div ref={(el) => { sectionRefs.current[4] = el; }} className={`gap-6 ${step === 4 ? 'grid' : 'hidden'}`}>
-        <p className="text-sm text-slate-600">
-          Please check your details. Use <strong>Edit</strong> to go back and change anything.
+        <p className="text-sm text-muted">
+          Please check your details. Use <strong className="text-ink">Edit</strong> to go back and change anything.
         </p>
 
         {STEP_FIELDS.slice(0, LAST).map((fields, i) => {
           const rows = summary.filter(([k]) => (fields as readonly string[]).includes(k));
           return (
-            <section key={STEPS[i].title} className="rounded-2xl border border-slate-200">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-                <h4 className="font-black text-[#073b66]">{STEPS[i].heading}</h4>
-                <button type="button" onClick={() => jumpTo(i)} className="text-sm font-semibold text-[#0d9488] hover:underline">
+            <section key={STEPS[i].title} className="overflow-hidden rounded-2xl border border-line">
+              <div className="flex items-center justify-between border-b border-line bg-tint px-4 py-3">
+                <h4 className="font-display font-bold">{STEPS[i].heading}</h4>
+                <button type="button" onClick={() => jumpTo(i)} className={`text-sm ${linkCls}`}>
                   Edit
                 </button>
               </div>
               <dl className="grid gap-x-6 gap-y-3 p-4 text-sm sm:grid-cols-2">
                 {rows.map(([k, v]) => (
                   <div key={k} className="min-w-0">
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{LABELS[k]}</dt>
-                    <dd className="break-words text-slate-800">{v}</dd>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted">{LABELS[k]}</dt>
+                    <dd className="break-words">{v}</dd>
                   </div>
                 ))}
               </dl>
@@ -754,16 +752,16 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
         })}
 
         {fee ? (
-          <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <p className="rounded-2xl bg-tint px-4 py-3 text-sm">
             Membership fee: <strong>{inr(fee)}</strong> — payable after you submit (QR / bank transfer, then upload the proof).
           </p>
         ) : null}
 
         <div className="grid gap-2">
-          <label className="flex items-start gap-3 text-sm font-normal text-slate-700">
+          <label className="flex items-start gap-3 text-sm font-normal">
             <input
               type="checkbox" name="declaration_accepted" required aria-invalid={inv('declaration_accepted')}
-              className="mt-1 h-4 w-4 accent-[#0d9488]"
+              className="mt-1 h-4 w-4 accent-brand"
             />
             <span>
               I confirm that I am applying for Lifetime Membership of the association. I understand
@@ -779,39 +777,25 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
         <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {message}{' '}
           {showResume && (
-            <Link href="/membership/apply/resume" className="font-semibold underline">
-              Continue your application →
+            <Link href="/membership/login" className="font-semibold underline">
+              Log in to continue →
             </Link>
           )}
         </p>
       )}
 
       {/* ───────── Navigation ───────── */}
-      <div className="mt-8 flex items-center justify-between gap-3 border-t border-slate-200 pt-5">
-        <button
-          type="button"
-          onClick={goBack}
-          disabled={step === 0 || busy}
-          className="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:invisible"
-        >
+      <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-5">
+        <button type="button" onClick={goBack} disabled={step === 0 || busy} className={ghostBtn}>
           ← Back
         </button>
 
         {step < LAST ? (
-          <button
-            type="button"
-            onClick={() => void goNext()}
-            disabled={busy}
-            className="rounded-xl bg-[#0d9488] px-6 py-3 font-semibold text-white transition hover:bg-[#0b7d73] disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <button type="button" onClick={() => void goNext()} disabled={busy} className={solidBtn}>
             {busy ? (step === 3 ? 'Uploading…' : 'Saving…') : 'Save & continue →'}
           </button>
         ) : (
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-xl bg-[#0d9488] px-6 py-3 font-semibold text-white transition hover:bg-[#0b7d73] disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <button type="submit" disabled={busy} className={solidBtn}>
             {busy ? 'Submitting…' : 'Submit Application'}
           </button>
         )}

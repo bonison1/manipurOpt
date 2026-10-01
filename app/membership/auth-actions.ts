@@ -1,22 +1,40 @@
 // Path: app/membership/auth-actions.ts
 'use server';
 
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createSupabaseServer } from '@/lib/auth/supabase-server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { signInWithDob } from './member-session';
+import { clearApplySession } from './apply-session';
 
 export type AuthState = { error?: string; success?: string } | undefined;
 
 const clean = (v: unknown) => String(v ?? '').trim();
 
 /* ------------------------------ Login ------------------------------ */
+// The account is created automatically when step 1 of the application is saved, so there is
+// no separate sign-up. Two ways in, both end on the dashboard:
+//  • email + password (once the member has created one)
+//  • email + date of birth (works before a password exists; the dashboard then asks for one)
 
 export async function memberLogin(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const method = clean(formData.get('method')) === 'dob' ? 'dob' : 'password';
   const email = clean(formData.get('email')).toLowerCase();
-  const password = String(formData.get('password') ?? '');
 
-  if (!email || !password) return { error: 'Enter your email and password.' };
+  if (!email) return { error: 'Enter your email.' };
+
+  if (method === 'dob') {
+    const dob = clean(formData.get('date_of_birth'));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return { error: 'Enter your date of birth.' };
+
+    const result = await signInWithDob(email, dob);
+    if (!result.ok) return { error: result.error };
+
+    redirect('/membership/dashboard');
+  }
+
+  const password = String(formData.get('password') ?? '');
+  if (!password) return { error: 'Enter your email and password.' };
 
   const supabase = await createSupabaseServer();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -25,73 +43,41 @@ export async function memberLogin(_prev: AuthState, formData: FormData): Promise
     if (error.code === 'email_not_confirmed' || /confirm/i.test(error.message)) {
       return { error: 'Please confirm your email first. Check your inbox for the confirmation link.' };
     }
-    return { error: 'Invalid email or password.' };
+    return {
+      error: 'Invalid email or password. If you have not created a password yet, log in with your date of birth.',
+    };
   }
 
   redirect('/membership/dashboard');
 }
 
-/* ------------------------------ Sign up ------------------------------ */
-// Only people who already applied can create an account: registration number + email
-// must match an application. The dashboard then finds the application by the
-// (confirmed) email of the logged-in user.
+/* ------------------------- Create password (dashboard popup) ------------------------- */
 
-export async function memberSignup(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const applicationNo = clean(formData.get('application_no')).toUpperCase();
-  const email = clean(formData.get('email')).toLowerCase();
+export async function createPassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const password = String(formData.get('password') ?? '');
   const confirm = String(formData.get('confirm') ?? '');
 
-  if (!applicationNo) return { error: 'Enter your registration number.' };
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: 'Enter a valid email address.' };
   if (password.length < 8) return { error: 'Password must be at least 8 characters.' };
   if (password !== confirm) return { error: 'Passwords do not match.' };
 
-  const { data: app, error: appError } = await createServiceClient()
-    .from('membership_applications')
-    .select('id')
-    .eq('application_no', applicationNo)
-    .eq('email', email)
-    .maybeSingle();
-
-  if (appError) {
-    console.error('signup lookup failed:', appError);
-    return { error: 'Could not verify your application. Please try again.' };
-  }
-  if (!app) {
-    return {
-      error:
-        'No application found for that registration number and email. Use the email you applied with, or apply for membership first.',
-    };
-  }
-
-  const h = await headers();
-  const origin = h.get('origin') ?? process.env.NEXT_PUBLIC_SITE_URL ?? '';
-
   const supabase = await createSupabaseServer();
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: `${origin}/membership/auth/callback?next=/membership/dashboard` },
-  });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: 'Your session has ended. Please log in again.' };
 
+  const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    if (/registered|already/i.test(error.message)) {
-      return { error: 'An account with this email already exists. Please log in.' };
-    }
-    console.error('signup failed:', error);
+    console.error('create password failed:', error);
     return { error: error.message };
   }
 
-  // With email confirmation on, an existing address comes back with no identities
-  if (data.user && data.user.identities?.length === 0) {
-    return { error: 'An account with this email already exists. Please log in.' };
-  }
+  await createServiceClient()
+    .from('membership_applications')
+    .update({ password_set: true })
+    .eq('email', user.email.toLowerCase());
 
-  // Email confirmation switched off in Supabase: user is already signed in
-  if (data.session) redirect('/membership/dashboard');
-
-  return { success: `Account created. We sent a confirmation link to ${email}. Click it, then log in.` };
+  redirect('/membership/dashboard');
 }
 
 /* ------------------------------ Logout ------------------------------ */
@@ -99,5 +85,6 @@ export async function memberSignup(_prev: AuthState, formData: FormData): Promis
 export async function memberLogout() {
   const supabase = await createSupabaseServer();
   await supabase.auth.signOut();
+  await clearApplySession();
   redirect('/membership/login');
 }

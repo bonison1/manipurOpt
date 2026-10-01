@@ -7,11 +7,13 @@ import { login } from './actions';
 const inputCls =
   'rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20';
 
-export default function LoginForm() {
+export default function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(login, undefined);
 
   return (
     <form action={formAction} className="grid gap-5">
+      <input type="hidden" name="next" value={next ?? ''} />
+
       <label className="grid gap-2 text-sm font-semibold">
         Email
         <input name="email" type="email" required autoComplete="email" className={inputCls} />

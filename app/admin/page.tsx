@@ -8,6 +8,18 @@ import AdminNav from './AdminNav';
 
 export const dynamic = 'force-dynamic';
 
+const sections: { label: string; href?: string; note: string }[] = [
+  { label: 'Admins', href: '/admin/admins', note: 'Add or remove people who can access this panel.' },
+  { label: 'Leadership', href: '/admin/leadership', note: 'Add leaders with name, position and photo.' },
+  { label: 'Gallery', href: '/admin/gallery', note: 'Upload and remove gallery photos.' },
+  { label: 'Members', note: 'placeholder' },
+  { label: 'Events', note: 'placeholder' },
+  { label: 'News', note: 'placeholder' },
+  { label: 'Projects', note: 'placeholder' },
+  { label: 'Resources', note: 'placeholder' },
+  { label: 'Messages', note: 'placeholder' },
+];
+
 export default async function Admin() {
   const user = await requireAdmin();
   const sb = createAdminClient();
@@ -44,12 +56,21 @@ export default async function Admin() {
       </div>
 
       <div className="mt-10 grid gap-4 md:grid-cols-3">
-        {['Members', 'Events', 'News', 'Projects', 'Resources', 'Gallery', 'Messages', 'Leadership'].map((x) => (
-          <Card key={x}>
-            <h2 className="font-bold text-[#073b66]">{x}</h2>
-            <p className="mt-2 text-xs text-slate-500">Manage {x.toLowerCase()} — placeholder.</p>
-          </Card>
-        ))}
+        {sections.map((x) => {
+          const card = (
+            <Card>
+              <h2 className="font-bold text-[#073b66]">{x.label}</h2>
+              <p className="mt-2 text-xs text-slate-500">
+                {x.note === 'placeholder' ? `Manage ${x.label.toLowerCase()} — placeholder.` : x.note}
+              </p>
+            </Card>
+          );
+          return x.href ? (
+            <Link key={x.label} href={x.href}>{card}</Link>
+          ) : (
+            <div key={x.label}>{card}</div>
+          );
+        })}
       </div>
     </div>
   );

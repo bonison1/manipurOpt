@@ -2,8 +2,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { PageHero } from '@/components/Page';
-import { Card } from '@/components/ui';
+import { PageHero } from '@/components/PageHero';
+import { PageBody, Panel as Card } from '@/components/form-ui';
 import StatusBadge from '@/components/StatusBadge';
 import { createSupabaseServer } from '@/lib/auth/supabase-server';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -11,6 +11,8 @@ import { formatDate, inr } from '@/lib/format';
 import { memberLogout } from '../auth-actions';
 import PayButton from '../PayButton';
 import MemberCard from './MemberCard';
+import CreatePasswordModal from './CreatePasswordModal';
+import RefreshOnShow from '../RefreshOnShow';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Member Dashboard | MOA' };
@@ -34,10 +36,11 @@ type Member = {
   certificate_no: string | null;
   is_draft: boolean;
   draft_step: number | null;
+  password_set: boolean | null;
 };
 
 const COLUMNS =
-  'application_no, full_name, email, phone, district, membership_category, qualification, institution, professional_reg_no, status, payment_status, fee_amount, created_at, reviewed_at, admin_notes, certificate_no, is_draft, draft_step';
+  'application_no, full_name, email, phone, district, membership_category, qualification, institution, professional_reg_no, status, payment_status, fee_amount, created_at, reviewed_at, admin_notes, certificate_no, is_draft, draft_step, password_set';
 
 const dateOnly = (iso: string | null) =>
   iso
@@ -59,8 +62,9 @@ function headline(m: Member) {
 function Shell({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <>
-      <PageHero title={title} subtitle={subtitle} />
-      <div className="container py-12">{children}</div>
+      <RefreshOnShow />
+      <PageHero align="center" title={title} subtitle={subtitle} />
+      <PageBody width="max-w-4xl">{children}</PageBody>
     </>
   );
 }
@@ -132,6 +136,9 @@ export default async function MemberDashboard() {
 
   const m = data as Member | null;
 
+  // Signed in with date of birth and no password yet -> ask them to create one
+  const passwordModal = m && !m.password_set ? <CreatePasswordModal /> : null;
+
   if (!m) {
     return (
       <Shell title="Member dashboard" subtitle={`Signed in as ${user.email}`}>
@@ -148,26 +155,38 @@ export default async function MemberDashboard() {
     );
   }
 
-  // Unfinished application: send them back into the form (they are already signed in)
+  // Unfinished application: show progress and a button back into the form
   if (m.is_draft) {
+    const TOTAL_STEPS = 5;
+    const done = Math.min(Math.max(m.draft_step ?? 1, 1), TOTAL_STEPS);
     return (
       <Shell title="Member dashboard" subtitle={`Welcome, ${m.full_name}`}>
-        <Card>
-          <p className="font-mono text-lg font-bold text-[#073b66]">{m.application_no}</p>
-          <p className="mt-3 font-semibold text-[#073b66]">Your application is not finished yet.</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Your saved answers are waiting. Continue from where you stopped and submit to start the review.
-          </p>
-          <div className="mt-5 flex flex-wrap items-center gap-4">
-            <Link
-              href="/membership/apply"
-              className="inline-flex items-center justify-center rounded-xl bg-[#0d9488] px-6 py-3 font-semibold text-white transition hover:bg-[#0b7d73]"
-            >
-              Continue application
-            </Link>
+        {passwordModal}
+        <div className="grid gap-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span className="text-slate-500">{user.email}</span>
             <SignOut />
           </div>
-        </Card>
+          <Card>
+            <p className="font-mono text-lg font-bold text-[#073b66]">{m.application_no}</p>
+            <p className="mt-3 font-semibold text-[#073b66]">Your application is not complete yet.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              {done} of {TOTAL_STEPS} steps saved. Complete and submit it to start the review. Your member card
+              appears here once the admin approves your application.
+            </p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full rounded-full bg-[#0d9488]" style={{ width: `${(done / TOTAL_STEPS) * 100}%` }} />
+            </div>
+            <div className="mt-5">
+              <Link
+                href="/membership/apply?resume=1"
+                className="inline-flex items-center justify-center rounded-xl bg-[#0d9488] px-6 py-3 font-semibold text-white transition hover:bg-[#0b7d73]"
+              >
+                Complete your submission
+              </Link>
+            </div>
+          </Card>
+        </div>
       </Shell>
     );
   }
@@ -191,6 +210,7 @@ export default async function MemberDashboard() {
 
   return (
     <Shell title="Member dashboard" subtitle={`Welcome, ${m.full_name}`}>
+      {passwordModal}
       <div className="grid gap-8">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span className="text-slate-500">{user.email}</span>
@@ -274,6 +294,16 @@ export default async function MemberDashboard() {
               </Card>
             )}
           </>
+        )}
+
+        {/* Card not available yet */}
+        {!approved && m.status !== 'rejected' && (
+          <Card>
+            <h2 className="text-xl font-black text-[#073b66]">Your member card</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Your member card will appear here once MOA verifies and approves your application.
+            </p>
+          </Card>
         )}
 
         {/* Profile */}

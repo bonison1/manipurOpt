@@ -2,14 +2,21 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
+import { ErrorNote, SubmitButton, inputCls, labelCls, linkCls } from '@/components/form-ui';
 import { memberLogin } from '../auth-actions';
 
-const inputCls =
-  'rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20';
+type Method = 'password' | 'dob';
+
+const TABS: { id: Method; label: string }[] = [
+  { id: 'password', label: 'Email & password' },
+  { id: 'dob', label: 'Email & date of birth' },
+];
 
 export default function LoginForm({ notice }: { notice?: string }) {
   const [state, formAction, pending] = useActionState(memberLogin, undefined);
+  const [method, setMethod] = useState<Method>('password');
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <form action={formAction} className="grid gap-5">
@@ -17,45 +24,67 @@ export default function LoginForm({ notice }: { notice?: string }) {
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{notice}</p>
       )}
 
-      <label className="grid gap-2 text-sm font-semibold">
+      {/* Sign-in method */}
+      <div role="tablist" aria-label="Sign-in method" className="grid grid-cols-2 gap-1 rounded-xl bg-tint p-1">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={method === t.id}
+            onClick={() => setMethod(t.id)}
+            className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+              method === t.id ? 'bg-white text-brand-dark shadow-sm' : 'text-muted hover:text-brand-dark'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <input type="hidden" name="method" value={method} />
+
+      {/* Rendered once so the typed email survives switching tabs */}
+      <label className={labelCls}>
         Email
         <input name="email" type="email" required autoComplete="email" className={inputCls} />
       </label>
-      <label className="grid gap-2 text-sm font-semibold">
-        Password
-        <input name="password" type="password" required autoComplete="current-password" className={inputCls} />
-      </label>
 
-      {state?.error && (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {state.error}
-        </p>
+      {method === 'password' ? (
+        <div className="grid gap-2">
+          <label className={labelCls}>
+            Password
+            <input name="password" type="password" required autoComplete="current-password" className={inputCls} />
+          </label>
+          <p className="text-xs text-muted">
+            No password yet? Use the “Email &amp; date of birth” tab. You can create a password after logging in.
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          <label className={labelCls}>
+            Date of birth
+            <input
+              name="date_of_birth"
+              type="date"
+              required
+              max={today}
+              autoComplete="bday"
+              className={inputCls}
+            />
+          </label>
+          <p className="text-xs text-muted">Use the email and date of birth from your application.</p>
+        </div>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-xl bg-[#0d9488] px-6 py-3 font-semibold text-white transition hover:bg-[#0b7d73] disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {pending ? 'Signing in…' : 'Log in'}
-      </button>
+      {state?.error && <ErrorNote>{state.error}</ErrorNote>}
 
-      <div className="grid gap-1 text-center text-sm text-slate-600">
-        <p>
-          Applied but no account yet?{' '}
-          <Link href="/membership/signup" className="font-semibold text-[#0d9488] hover:underline">
-            Create your account
-          </Link>
-        </p>
-        <p>
-          Started an application but didn’t finish?{' '}
-          <Link href="/membership/apply/resume" className="font-semibold text-[#0d9488] hover:underline">
-            Continue application
-          </Link>
-        </p>
+      <SubmitButton pending={pending} idle="Log in" busy="Signing in…" />
+
+      <div className="grid gap-1 text-center text-sm text-muted">
         <p>
           Not a member yet?{' '}
-          <Link href="/membership/apply" className="font-semibold text-[#0d9488] hover:underline">
+          <Link href="/membership/apply" className={linkCls}>
             Apply for membership
           </Link>
         </p>

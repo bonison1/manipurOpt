@@ -1,8 +1,9 @@
 // Path: app/membership/apply/page.tsx
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PageHero } from '@/components/Page';
-import { Card, SectionTitle } from '@/components/ui';
+import { redirect } from 'next/navigation';
+import { PageHero } from '@/components/PageHero';
+import { PageBody, Panel, linkCls } from '@/components/form-ui';
 import MembershipForm from '../MembershipForm';
 import { getCurrentApplicationId, loadDraft } from '../apply-data';
 
@@ -12,14 +13,25 @@ export const metadata: Metadata = {
   description: 'Complete the online MOA membership application form.',
 };
 
-export default async function ApplyPage() {
-  const id = await getCurrentApplicationId();
-  const draft = id ? await loadDraft(id) : null;
+// /membership/apply          -> always a blank form (refresh / Exit / Logout start from step 1)
+// /membership/apply?resume=1 -> continue the saved application (dashboard button, email + date of birth)
+export default async function ApplyPage({ searchParams }: { searchParams: Promise<{ resume?: string }> }) {
+  const { resume } = await searchParams;
+  const wantsResume = resume === '1';
+
+  let draft = null;
+  if (wantsResume) {
+    const id = await getCurrentApplicationId();
+    if (!id) redirect('/membership/login'); // not logged in: log in to continue
+    draft = await loadDraft(id);
+    if (!draft) redirect('/membership/dashboard'); // already submitted
+  }
 
   return (
     <>
       <PageHero
-        title="Membership Application"
+        align="center"
+        title="Membership application"
         subtitle={
           draft
             ? 'Welcome back — pick up where you left off.'
@@ -27,43 +39,42 @@ export default async function ApplyPage() {
         }
       />
 
-      <div className="container py-16">
+      <PageBody width="max-w-4xl">
         <p className="mb-6 text-sm">
-          <Link href="/membership#process" className="font-semibold text-[#0d9488] hover:underline">
+          <Link href="/membership#process" className={linkCls}>
             ← Back to registration process
           </Link>
         </p>
 
-        <SectionTitle
-          eyebrow="Application"
-          title="Online membership application"
-          text="Keep your documents (as one PDF) ready. Fields marked * are required. Your progress is saved after each step, so you can finish later."
-        />
+        <p className="mb-6 leading-7 text-muted">
+          Keep your documents (as one PDF) ready. Fields marked * are required. Your progress is saved after
+          each step, so you can finish later.
+        </p>
 
         {!draft && (
-          <p className="mb-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+          <p className="mb-6 rounded-2xl bg-tint px-5 py-4 text-sm">
             Already started an application?{' '}
-            <Link href="/membership/apply/resume" className="font-semibold text-[#0d9488] hover:underline">
+            <Link href="/membership/apply/resume" className={linkCls}>
               Continue with your email and date of birth →
             </Link>
           </p>
         )}
 
-        <Card>
+        <Panel>
           <MembershipForm initial={draft} />
-        </Card>
+        </Panel>
 
-        <p className="mt-4 text-center text-sm text-slate-600">
+        <p className="mt-6 text-center text-sm text-muted">
           Already submitted?{' '}
-          <Link href="/membership/track" className="font-semibold text-[#0d9488] hover:underline">
+          <Link href="/membership/track" className={linkCls}>
             Track your application
           </Link>
           {' · '}
-          <Link href="/membership/login" className="font-semibold text-[#0d9488] hover:underline">
+          <Link href="/membership/login" className={linkCls}>
             Member login
           </Link>
         </p>
-      </div>
+      </PageBody>
     </>
   );
 }

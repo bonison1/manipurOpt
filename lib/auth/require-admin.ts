@@ -1,15 +1,7 @@
 // Path: lib/auth/require-admin.ts
 import { redirect } from 'next/navigation';
 import { createSupabaseServer } from './supabase-server';
-
-// ADMIN_EMAILS="a@gmail.com,b@gmail.com" in .env
-export function isAdminEmail(email?: string | null) {
-  const list = (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return !!email && list.includes(email.toLowerCase());
-}
+import { checkIsAdmin } from './is-admin';
 
 // Returns the admin user, or null (use inside server actions)
 export async function getAdminUser() {
@@ -17,7 +9,8 @@ export async function getAdminUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return user && isAdminEmail(user.email) ? user : null;
+  if (!user) return null;
+  return (await checkIsAdmin(supabase, user.email)) ? user : null;
 }
 
 // Use at the top of admin pages: redirects to the login page if not an admin

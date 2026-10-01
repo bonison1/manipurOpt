@@ -8,13 +8,11 @@ import type { TrackedApplication } from '../constants';
 import PayButton from '../PayButton';
 import { getProofStatus, type ProofStatus } from '../payment-actions';
 import StatusBadge from '@/components/StatusBadge';
+import { ErrorNote, inputCls, labelCls, linkCls } from '@/components/form-ui';
 import { formatDate, inr } from '@/lib/format';
 
-const inputCls =
-  'rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-[#0d9488] focus:ring-2 focus:ring-[#0d9488]/20';
-
 const primaryBtn =
-  'inline-flex items-center justify-center rounded-xl bg-[#0d9488] px-6 py-3 font-semibold text-white transition hover:bg-[#0b7d73] disabled:cursor-not-allowed disabled:opacity-60';
+  'inline-flex items-center justify-center rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60';
 
 function headline(a: TrackedApplication, proofSubmitted: boolean) {
   if (a.status === 'approved') return 'Your membership has been approved.';
@@ -112,9 +110,9 @@ export default function TrackForm({
     <div className="grid gap-8">
       {/* ── Not logged in: offer login as the quick way ── */}
       {!member && !signedIn && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-slate-700">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-tint px-4 py-3 text-sm">
           <span>Have a member account? Log in and your status appears automatically.</span>
-          <Link href="/membership/login" className="font-semibold text-[#0d9488] hover:underline">
+          <Link href="/membership/login" className={linkCls}>
             Log in →
           </Link>
         </div>
@@ -122,10 +120,10 @@ export default function TrackForm({
 
       {/* ── Logged in, but no application found for this email ── */}
       {signedIn && !member && (
-        <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <p className="rounded-2xl bg-tint px-4 py-3 text-sm">
           We couldn&apos;t find an application for your account email. Enter the registration number and
           email of your application below, or{' '}
-          <Link href="/membership/apply" className="font-semibold text-[#0d9488] hover:underline">
+          <Link href="/membership/apply" className={linkCls}>
             start a new application
           </Link>
           .
@@ -134,39 +132,35 @@ export default function TrackForm({
 
       {/* ── Unfinished application (logged in, or resumed with email + date of birth) ── */}
       {member?.isDraft && (
-        <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-5">
-          <p className="font-mono text-lg font-bold text-[#073b66]">{member.applicationNo}</p>
-          <p className="font-semibold text-[#073b66]">Your application is not finished yet.</p>
-          <p className="text-sm text-slate-700">
+        <div className="grid gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-5">
+          <p className="font-mono text-lg font-bold">{member.applicationNo}</p>
+          <p className="font-semibold">Your application is not finished yet.</p>
+          <p className="text-sm text-muted">
             Your saved answers are waiting. Continue from where you stopped and submit to start the review.
           </p>
           <div>
-            <Link href="/membership/apply" className={primaryBtn}>
+            <Link href="/membership/apply?resume=1" className={primaryBtn}>
               Continue application
             </Link>
           </div>
         </div>
       )}
 
-      {loadingOwn && <p className="text-sm text-slate-600">Loading your application…</p>}
+      {loadingOwn && <p className="text-sm text-muted">Loading your application…</p>}
 
       {/* ── Manual lookup (registration number + email) ── */}
       {member && !showManual ? (
-        <button
-          type="button"
-          onClick={() => setShowManual(true)}
-          className="justify-self-start text-sm font-semibold text-[#0d9488] hover:underline"
-        >
+        <button type="button" onClick={() => setShowManual(true)} className={`justify-self-start text-sm ${linkCls}`}>
           Look up a different application
         </button>
       ) : (
         <form onSubmit={onSubmit} className="grid gap-5">
           {autoFailed && (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-muted">
               We couldn&apos;t load your application automatically. You can look it up manually:
             </p>
           )}
-          <label className="grid gap-2 text-sm font-semibold">
+          <label className={labelCls}>
             Registration number
             <input
               name="application_no"
@@ -176,7 +170,7 @@ export default function TrackForm({
               className={`${inputCls} uppercase`}
             />
           </label>
-          <label className="grid gap-2 text-sm font-semibold">
+          <label className={labelCls}>
             Email used in the application
             <input name="email" type="email" required placeholder="Email" className={inputCls} />
           </label>
@@ -185,27 +179,19 @@ export default function TrackForm({
               {isPending ? 'Checking…' : 'Check status'}
             </button>
           </div>
-          {error && !autoFailed && (
-            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </p>
-          )}
+          {error && !autoFailed && <ErrorNote>{error}</ErrorNote>}
         </form>
       )}
 
       {/* Errors from the automatic lookup (form is shown above as a fallback) */}
-      {error && autoFailed && (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      )}
+      {error && autoFailed && <ErrorNote>{error}</ErrorNote>}
 
       {app && (
-        <div className="grid gap-6 border-t pt-8">
+        <div className="grid gap-6 border-t border-line pt-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="font-mono text-lg font-bold text-[#073b66]">{app.application_no}</p>
-              <p className="text-sm text-slate-600">
+              <p className="font-mono text-lg font-bold">{app.application_no}</p>
+              <p className="text-sm text-muted">
                 {app.full_name} · {app.membership_category}
               </p>
             </div>
@@ -221,13 +207,10 @@ export default function TrackForm({
             </div>
           </div>
 
-          <p className="font-semibold text-[#073b66]">{headline(app, proofSubmitted)}</p>
+          <p className="font-display text-lg font-bold">{headline(app, proofSubmitted)}</p>
 
           {app.status === 'approved' && (
-            <Link
-              href={signedIn ? '/membership/dashboard' : '/membership/login'}
-              className="text-sm font-semibold text-[#0d9488] hover:underline"
-            >
+            <Link href={signedIn ? '/membership/dashboard' : '/membership/login'} className={`text-sm ${linkCls}`}>
               {signedIn
                 ? 'Open your member dashboard to see your card and certificate number →'
                 : 'Log in to see your member card and certificate number →'}
@@ -239,23 +222,23 @@ export default function TrackForm({
               <li key={s.label} className="flex items-start gap-3 text-sm">
                 <span
                   className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-                    s.done ? 'bg-[#0d9488] text-white' : 'border border-slate-300 text-slate-400'
+                    s.done ? 'bg-brand text-white' : 'border border-line text-muted'
                   }`}
                 >
                   {s.done ? '✓' : ''}
                 </span>
                 <span>
-                  <span className="font-semibold text-slate-800">{s.label}</span>
-                  <span className="block text-slate-500">{s.detail}</span>
+                  <span className="font-semibold">{s.label}</span>
+                  <span className="block text-muted">{s.detail}</span>
                 </span>
               </li>
             ))}
           </ol>
 
           {app.admin_notes && (
-            <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <div className="rounded-2xl bg-tint px-4 py-3 text-sm">
               <p className="font-semibold">Note from MOA</p>
-              <p className="mt-1 whitespace-pre-wrap">{app.admin_notes}</p>
+              <p className="mt-1 whitespace-pre-wrap text-muted">{app.admin_notes}</p>
             </div>
           )}
 
