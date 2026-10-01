@@ -5,4 +5,4 @@
 
 s
 # manipur-moa
-f
+f# manipurOpt
