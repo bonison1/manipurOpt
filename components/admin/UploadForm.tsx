@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, type ChangeEvent, type ReactNode } from 'react';
+import { SubmitButton, PendingOverlay } from '@/components/admin/SubmitButton';
 
 const MAX = 1024 * 1024;
 
@@ -40,7 +41,11 @@ export default function UploadForm({
 
   return (
     <form action={action} className="grid gap-4">
+      {/* Blocks the whole page and shows the animation while uploading */}
+      <PendingOverlay text="Uploading..." />
+
       {children}
+
       <div>
         <label className="mb-1 block text-sm font-semibold text-slate-700">
           Photo{multiple ? 's (up to 5)' : ''} — JPG, PNG or WebP, under 1 MB each
@@ -56,6 +61,7 @@ export default function UploadForm({
         />
         {err && <p className="mt-2 text-sm font-medium text-red-600">{err}</p>}
       </div>
+
       {previews.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {previews.map((p) => (
@@ -64,13 +70,14 @@ export default function UploadForm({
           ))}
         </div>
       )}
-      <button
-        type="submit"
+
+      <SubmitButton
+        pendingText="Uploading..."
         disabled={!!err}
-        className="w-fit rounded-lg bg-[#0d9488] px-5 py-2 text-sm font-bold text-white disabled:opacity-50"
+        className="w-fit rounded-lg bg-[#0d9488] px-5 py-2 text-sm font-bold text-white"
       >
         {submitLabel}
-      </button>
+      </SubmitButton>
     </form>
   );
 }

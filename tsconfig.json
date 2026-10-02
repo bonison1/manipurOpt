@@ -27,6 +27,6 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "app/membership/payment-actions.tss"  ],
   "exclude": ["node_modules"]
 }

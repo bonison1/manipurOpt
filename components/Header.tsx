@@ -2,28 +2,45 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   HomeIcon,
   InformationCircleIcon,
   UserGroupIcon,
   PhotoIcon,
-  PhoneIcon,
+  BuildingOfficeIcon,
+  BuildingStorefrontIcon,
+  AcademicCapIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import { memberLogout } from '@/app/membership/auth-actions';
 import { logout as adminLogout } from '@/app/admin/login/actions';
 import type { Me } from '@/lib/auth/get-me';
 
-const links = [
-  ['Home', '/', HomeIcon],
-  ['About', '/about', InformationCircleIcon],
+const membershipMenu = [
   ['Membership', '/membership', UserGroupIcon],
-  // ['Events', '/events', CalendarDaysIcon],
-  // ['Projects', '/projects', BriefcaseIcon],
-  // ['News', '/news', BellIcon],
-  ['Gallery', '/gallery', PhotoIcon],
-  ['Contact', '/contact', PhoneIcon],
+  ['Student Registration', '/register/student', AcademicCapIcon],
+  ['Clinic Registration', '/register/clinic', BuildingStorefrontIcon],
+  ['Institution Registration', '/register/institute', BuildingOfficeIcon], // segment must match RegType: 'institute'
 ] as const;
+
+type NavItem = {
+  name: string;
+  href: string;
+  Icon: typeof HomeIcon;
+  children?: typeof membershipMenu;
+};
+
+const links: NavItem[] = [
+  { name: 'Home', href: '/', Icon: HomeIcon },
+  { name: 'About', href: '/about', Icon: InformationCircleIcon },
+  { name: 'Membership', href: '/membership', Icon: UserGroupIcon, children: membershipMenu },
+  // { name: 'Events', href: '/events', Icon: CalendarDaysIcon },
+  // { name: 'Projects', href: '/projects', Icon: BriefcaseIcon },
+  // { name: 'News', href: '/news', Icon: BellIcon },
+  { name: 'Gallery', href: '/gallery', Icon: PhotoIcon },
+  // { name: 'Contact', href: '/contact', Icon: PhoneIcon },
+];
 
 // Where "Login" goes when nobody is signed in (members log in here; admins use /admin/login)
 const LOGIN_HREF = '/membership/login';
@@ -33,9 +50,16 @@ const HINT_KEY = 'moa-auth-hint'; // remembers the last state so the header does
 export default function Header({ initialMe }: { initialMe?: Me }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false); // desktop dropdown
+  const [mobileSub, setMobileSub] = useState(false); // mobile accordion
   const [me, setMe] = useState<Me>(initialMe ?? null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    setOpen(false);
+    setMenuOpen(false);
+    setMobileSub(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -43,6 +67,21 @@ export default function Header({ initialMe }: { initialMe?: Me }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
+
+  // Close the desktop dropdown on outside click or Escape
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('mousedown', onClick);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
 
   // The server already told us who is signed in; keep following it when the layout re-renders
   useEffect(() => {
@@ -206,19 +245,62 @@ export default function Header({ initialMe }: { initialMe?: Me }) {
       {/* Solid nav bar (desktop) */}
       <nav className="hidden bg-brand-dark lg:block" aria-label="Main">
         <div className="wrap flex items-center gap-1">
-          {links.map(([name, href, Icon]) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={active(href) ? 'page' : undefined}
-              className={`flex items-center gap-2 px-5 py-4 text-[15px] font-semibold text-white transition-colors hover:bg-white/10 ${
-                active(href) ? 'bg-white/15' : ''
-              }`}
-            >
-              <Icon className="h-5 w-5" aria-hidden="true" />
-              {name}
-            </Link>
-          ))}
+          {links.map(({ name, href, Icon, children }) =>
+            children ? (
+              <div key={href} ref={menuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className={`flex items-center gap-2 px-5 py-4 text-[15px] font-semibold text-white transition-colors hover:bg-white/10 ${
+                    children.some(([, h]) => active(h)) || menuOpen ? 'bg-white/15' : ''
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  {name}
+                  <ChevronDownIcon
+                    className={`h-4 w-4 transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {menuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full z-50 min-w-[16rem] overflow-hidden rounded-b-lg bg-white py-1 shadow-lg ring-1 ring-black/5"
+                  >
+                    {children.map(([label, h, ChildIcon]) => (
+                      <Link
+                        key={h}
+                        href={h}
+                        role="menuitem"
+                        aria-current={active(h) ? 'page' : undefined}
+                        className={`flex items-center gap-3 px-5 py-3 text-sm font-semibold text-brand-dark hover:bg-tint ${
+                          active(h) ? 'bg-tint' : ''
+                        }`}
+                      >
+                        <ChildIcon className="h-5 w-5" aria-hidden="true" />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active(href) ? 'page' : undefined}
+                className={`flex items-center gap-2 px-5 py-4 text-[15px] font-semibold text-white transition-colors hover:bg-white/10 ${
+                  active(href) ? 'bg-white/15' : ''
+                }`}
+              >
+                <Icon className="h-5 w-5" aria-hidden="true" />
+                {name}
+              </Link>
+            ),
+          )}
         </div>
       </nav>
 
@@ -226,19 +308,56 @@ export default function Header({ initialMe }: { initialMe?: Me }) {
       {open && (
         <nav id="mobile-nav" aria-label="Mobile" className="bg-brand-dark lg:hidden">
           <div className="wrap py-2">
-            {links.map(([name, href, Icon]) => (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active(href) ? 'page' : undefined}
-                className={`flex items-center gap-3 border-b border-white/10 py-4 font-semibold text-white ${
-                  active(href) ? 'text-white' : 'text-white/90'
-                }`}
-              >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-                {name}
-              </Link>
-            ))}
+            {links.map(({ name, href, Icon, children }) =>
+              children ? (
+                <div key={href} className="border-b border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setMobileSub((v) => !v)}
+                    aria-expanded={mobileSub}
+                    className="flex w-full items-center gap-3 py-4 font-semibold text-white"
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    {name}
+                    <ChevronDownIcon
+                      className={`ml-auto h-4 w-4 transition-transform ${
+                        mobileSub ? 'rotate-180' : ''
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {mobileSub && (
+                    <div className="mb-2 ml-8 border-l border-white/20 pl-3">
+                      {children.map(([label, h, ChildIcon]) => (
+                        <Link
+                          key={h}
+                          href={h}
+                          aria-current={active(h) ? 'page' : undefined}
+                          className={`flex items-center gap-3 py-3 text-sm font-semibold ${
+                            active(h) ? 'text-white' : 'text-white/80'
+                          }`}
+                        >
+                          <ChildIcon className="h-4 w-4" aria-hidden="true" />
+                          {label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active(href) ? 'page' : undefined}
+                  className={`flex items-center gap-3 border-b border-white/10 py-4 font-semibold text-white ${
+                    active(href) ? 'text-white' : 'text-white/90'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" aria-hidden="true" />
+                  {name}
+                </Link>
+              ),
+            )}
 
             {me ? (
               <form action={logoutAction} onSubmit={clearMe}>

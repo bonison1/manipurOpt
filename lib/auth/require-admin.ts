@@ -1,19 +1,37 @@
 // Path: lib/auth/require-admin.ts
 import { redirect } from 'next/navigation';
-import { createSupabaseServer } from './supabase-server';
-import { checkIsAdmin } from './is-admin';
+import { createSupabaseServer } from '@/lib/auth/supabase-server';
+import { checkIsAdmin } from '@/lib/auth/is-admin';
 
-// Returns the admin user, or null (use inside server actions)
+/**
+ * Returns the signed-in admin user, or null if not signed in / not an admin.
+ * Use in server actions and route handlers, where you want to return an
+ * error instead of redirecting.
+ */
 export async function getAdminUser() {
   const supabase = await createSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user) return null;
-  return (await checkIsAdmin(supabase, user.email)) ? user : null;
+  if (!(await checkIsAdmin(supabase, user.email))) return null;
+
+  return user;
 }
 
-// Use at the top of admin pages: redirects to the login page if not an admin
+/**
+ * Boolean version of the check.
+ * Use in pages that want to render notFound() for non-admins.
+ */
+export async function isAdmin(): Promise<boolean> {
+  return (await getAdminUser()) !== null;
+}
+
+/**
+ * Same check, but redirects to the login page on failure.
+ * Use in server components / pages that should send people to login.
+ */
 export async function requireAdmin() {
   const user = await getAdminUser();
   if (!user) redirect('/admin/login');

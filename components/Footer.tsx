@@ -1,17 +1,8 @@
+//components/Footer.tsx
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPinIcon, PhoneIcon } from '@heroicons/react/24/outline';
-
-const links = [
-  ['Home', '/'],
-  ['About', '/about'],
-  ['Membership', '/membership'],
-  // ['Events', '/events'],
-  // ['Projects', '/projects'],
-  ['Gallery', '/gallery'],
-  ['Contact', '/contact'],
-  ['Admin', '/admin/login'],
-];
+import QuickLinks from './QuickLinks';
 
 function Heading({ children }: { children: React.ReactNode }) {
   return (
@@ -43,13 +34,7 @@ export default function Footer() {
         {/* Quick links */}
         <div>
           <Heading>Quick Links</Heading>
-          <nav aria-label="Footer" className="mt-6 flex flex-col gap-3 text-lg">
-            {links.map(([name, href]) => (
-              <Link key={href} href={href} className="hover:text-blue-300">
-                {name}
-              </Link>
-            ))}
-          </nav>
+          <QuickLinks />
         </div>
 
         {/* Contact */}

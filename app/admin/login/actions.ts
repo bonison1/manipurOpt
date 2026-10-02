@@ -1,9 +1,8 @@
-// Path: app/admin/login/actions.ts
 'use server';
 
 import { redirect } from 'next/navigation';
 import { createSupabaseServer } from '@/lib/auth/supabase-server';
-import { checkIsAdmin } from '@/lib/auth/is-admin';
+import { resolveRole, HOME } from '@/lib/auth/resolve-home';
 
 // Only allow redirects to pages inside /admin (prevents open redirects).
 function safeNext(value: string) {
@@ -22,12 +21,14 @@ export async function login(_prev: { error?: string } | undefined, formData: For
 
   if (error || !data.user) return { error: 'Invalid email or password.' };
 
-  if (!(await checkIsAdmin(supabase, data.user.email))) {
-    await supabase.auth.signOut();
-    return { error: 'This account does not have admin access.' };
-  }
+  const role = await resolveRole(supabase, data.user.email);
 
-  redirect(next);
+  if (role === 'admin') redirect(next);
+  if (role === 'member') redirect(HOME.member);
+
+  // Valid Supabase user, but neither admin nor member
+  await supabase.auth.signOut();
+  return { error: 'This account does not have access.' };
 }
 
 export async function logout() {

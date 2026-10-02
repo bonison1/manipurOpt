@@ -1,1 +1,1 @@
-self.__NEXT_FONT_MANIFEST="{\"pages\":{},\"app\":{\"/Users/macbook/Downloads/moa-website/app/layout\":[\"static/media/1a4aa50920b5315c-s.p.woff2\",\"static/media/8bf7b2ceda89477b-s.p.woff2\"]},\"appUsingSizeAdjust\":true,\"pagesUsingSizeAdjust\":false}"
+self.__NEXT_FONT_MANIFEST='{"pages":{},"app":{"/Users/macbook/Downloads/moa-website/app/layout":["static/media/1a4aa50920b5315c-s.p.woff2","static/media/8bf7b2ceda89477b-s.p.woff2"]},"appUsingSizeAdjust":true,"pagesUsingSizeAdjust":false}';

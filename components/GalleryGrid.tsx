@@ -1,9 +1,16 @@
-// Path: components/GalleryGrid.tsx
 'use client';
 
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 import type { GalleryImage } from '@/lib/gallery';
+import { TILE_SPAN, tileFor, type Tile } from '@/lib/gallery-layout';
+
+const SIZES: Record<Tile, string> = {
+  feature: '(min-width: 768px) 50vw, 100vw',
+  wide: '(min-width: 768px) 50vw, 100vw',
+  tall: '(min-width: 768px) 25vw, 50vw',
+  std: '(min-width: 768px) 25vw, 50vw',
+};
 
 export function GalleryGrid({ images }: { images: GalleryImage[] }) {
   const [current, setCurrent] = useState<number | null>(null);
@@ -44,25 +51,48 @@ export function GalleryGrid({ images }: { images: GalleryImage[] }) {
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
-        {images.map((img, i) => (
-          <li key={img.src}>
-            <button
-              type="button"
-              onClick={() => setCurrent(i)}
-              aria-label={`View photo: ${img.alt}`}
-              className="group relative block aspect-[4/3] w-full overflow-hidden rounded-2xl border border-line bg-tint"
-            >
-              <Image
-                src={img.src}
-                alt={img.alt}
-                fill
-                sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-                className="object-cover transition duration-300 group-hover:scale-105"
-              />
-            </button>
-          </li>
-        ))}
+      <ul className="grid grid-flow-dense auto-rows-[150px] grid-cols-2 gap-3 sm:auto-rows-[190px] md:auto-rows-[210px] md:grid-cols-4 md:gap-4">
+        {images.map((img, i) => {
+          const tile = tileFor(i);
+          return (
+            <li key={`${img.src}-${i}`} className={TILE_SPAN[tile]}>
+              <button
+                type="button"
+                onClick={() => setCurrent(i)}
+                aria-label={img.caption ? `View photo: ${img.caption}` : 'View photo'}
+                className="group relative block h-full w-full overflow-hidden rounded-2xl border border-line bg-tint text-left shadow-sm transition hover:shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#073b66]"
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  priority={i < 2}
+                  sizes={SIZES[tile]}
+                  className="object-cover transition duration-700 group-hover:scale-105"
+                />
+
+                {img.caption && (
+                  <>
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#031d33]/80 via-transparent to-transparent opacity-70 transition group-hover:opacity-100" />
+                    <p
+                      className={`absolute inset-x-0 bottom-0 p-3 font-semibold leading-snug text-white md:p-4 ${
+                        tile === 'feature' ? 'text-base md:text-xl' : 'line-clamp-2 text-xs md:text-sm'
+                      }`}
+                    >
+                      {img.caption}
+                    </p>
+                  </>
+                )}
+
+                {tile === 'feature' && (
+                  <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[#073b66]">
+                    Featured moment
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {active && (
@@ -81,7 +111,8 @@ export function GalleryGrid({ images }: { images: GalleryImage[] }) {
             onClick={(e) => e.stopPropagation()}
           />
           <p className="absolute bottom-5 left-0 right-0 px-16 text-center text-sm text-white/80">
-            {active.alt} · {current! + 1} / {images.length}
+            {active.caption && <>{active.caption} · </>}
+            {current! + 1} / {images.length}
           </p>
 
           <button type="button" aria-label="Close" onClick={close} className={`${btn} right-4 top-4`}>

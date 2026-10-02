@@ -1,4 +1,4 @@
-/* Path: app/globals.css (replace the entire file with this) */
+/* Path: app/globals.css */
 @import "tailwindcss";
 
 @theme {
@@ -41,21 +41,11 @@ body {
   transform-box: fill-box;
   transform-origin: center;
 }
-.eye-blink {
-  animation: eye-blink 6s ease-in-out infinite;
-}
-.eye-look {
-  animation: eye-look 9s ease-in-out infinite;
-}
-.eye-pupil {
-  animation: eye-pupil 4.5s ease-in-out infinite;
-}
-.eye-ring {
-  animation: eye-ring 4.8s ease-out infinite;
-}
-.eye-float {
-  animation: eye-float 6s ease-in-out infinite;
-}
+.eye-blink { animation: eye-blink 6s ease-in-out infinite; }
+.eye-look  { animation: eye-look 9s ease-in-out infinite; }
+.eye-pupil { animation: eye-pupil 4.5s ease-in-out infinite; }
+.eye-ring  { animation: eye-ring 4.8s ease-out infinite; }
+.eye-float { animation: eye-float 6s ease-in-out infinite; }
 
 @keyframes eye-blink {
   0%, 90%, 100% { transform: scaleY(1); }
@@ -80,15 +70,17 @@ body {
   50% { transform: translateY(-8px); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .eye-blink, .eye-look, .eye-pupil, .eye-ring, .eye-float {
-    animation: none;
-  }
-}
+/* Ticker (running text) */
 @keyframes marquee {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
 .marquee { animation: marquee 40s linear infinite; }
 .marquee:hover { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .eye-blink, .eye-look, .eye-pupil, .eye-ring, .eye-float {
+    animation: none;
+  }
+  .marquee { animation: none; }
+}

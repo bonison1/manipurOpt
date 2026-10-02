@@ -5,7 +5,9 @@ export const BUCKET = 'moa-media';
 export const MAX_BYTES = 1024 * 1024; // photos must be below 1 MB
 const TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
-export async function uploadImage(file: File, folder: 'leadership' | 'gallery') {
+export type MediaFolder = 'leadership' | 'gallery' | 'events' | 'messages' | 'banner' | 'hero';
+
+export async function uploadImage(file: File, folder: MediaFolder) {
   if (file.size >= MAX_BYTES) throw new Error(`${file.name} must be under 1 MB.`);
   const ext = TYPES[file.type];
   if (!ext) throw new Error(`${file.name}: only JPG, PNG or WebP allowed.`);

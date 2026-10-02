@@ -10,8 +10,12 @@ import {
 import Cta from '@/components/Cta';
 import GalleryBanner from '@/components/GalleryBanner';
 import Leadership from '@/components/Leadership';
-import { events, news } from '@/lib/data';
-import { getGalleryImages } from '@/lib/gallery';
+import { getUpcomingEvents, getLatestNews } from '@/lib/content';
+import { getBannerContent } from '@/lib/banner';
+import { getHeroContent } from '@/lib/hero';
+
+// Always read fresh events/news so admin changes show up immediately
+export const dynamic = 'force-dynamic';
 
 const pillars = [
   {
@@ -32,7 +36,8 @@ const pillars = [
 ];
 
 function dateParts(value: string) {
-  const d = new Date(value);
+  // DB dates are 'YYYY-MM-DD'; parse as local time so the day never shifts
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? value + 'T00:00:00' : value);
 
   if (Number.isNaN(d.getTime())) return null;
 
@@ -73,14 +78,20 @@ function ViewAll({
 }
 
 export default async function Home() {
-  const upcoming = events.slice(0, 3);
-  const latest = news.slice(0, 3);
+  // Events and news now come from the admin-managed database
+  const [upcoming, latest, bannerContent, heroContent] = await Promise.all([
+    getUpcomingEvents(3),
+    getLatestNews(3),
+    // Admin-chosen banner slides (falls back to the latest 6 gallery photos)
+    getBannerContent(),
+    // Hero photo + text chosen in Admin > Hero image
+    getHeroContent(),
+  ]);
+  const { photos: bannerPhotos, settings: banner } = bannerContent;
+  const { image: heroImage, settings: hero } = heroContent;
 
-  // Latest 6 gallery photos for the fading banner
-  const bannerPhotos = await getGalleryImages(6);
-
-  // Hero photo: uses the newest gallery photo, or /public/hero.jpg if the gallery is empty
-  const heroSrc = bannerPhotos[0]?.src ?? '/hero.jpg';
+  // Hero photo: admin-chosen image, else the first banner photo, else /public/hero.jpg
+  const heroSrc = heroImage?.url ?? bannerPhotos[0]?.src ?? '/hero.jpg';
 
   return (
     <>
@@ -107,20 +118,26 @@ export default async function Home() {
           />
 
           <h1 className="mt-6 font-display text-4xl font-extrabold tracking-tight text-brand sm:text-5xl md:text-6xl">
-            Manipur Optometrist Association
+            {hero.title}
           </h1>
 
-          <p className="mt-5 max-w-2xl font-display text-xl font-bold leading-snug text-ink md:text-3xl">
-            Advancing optometry. Improving vision. Serving Manipur.
-          </p>
+          {hero.tagline && (
+            <p className="mt-5 max-w-2xl font-display text-xl font-bold leading-snug text-ink md:text-3xl">
+              {hero.tagline}
+            </p>
+          )}
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Cta href="/membership">Become a member</Cta>
+          {((hero.cta1Label && hero.cta1Href) || (hero.cta2Label && hero.cta2Href)) && (
+            <div className="mt-8 flex flex-wrap gap-3">
+              {hero.cta1Label && hero.cta1Href && <Cta href={hero.cta1Href}>{hero.cta1Label}</Cta>}
 
-            <Cta href="/about" variant="ghost">
-              About MOA
-            </Cta>
-          </div>
+              {hero.cta2Label && hero.cta2Href && (
+                <Cta href={hero.cta2Href} variant="ghost">
+                  {hero.cta2Label}
+                </Cta>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -184,8 +201,8 @@ export default async function Home() {
                         </div>
 
                         <div className="mt-1 flex flex-wrap gap-x-3 text-sm text-muted">
-                          <span>{e.type}</span>
-                          <span>{e.location}</span>
+                          {e.type && <span>{e.type}</span>}
+                          {e.location && <span>{e.location}</span>}
                           {!p && <span>{e.date}</span>}
                         </div>
                       </div>
@@ -217,17 +234,21 @@ export default async function Home() {
                     href={'/news/' + n.slug}
                     className="group block py-4"
                   >
-                    <div className="text-sm font-medium text-brand">
-                      {n.category}
-                    </div>
+                    {n.category && (
+                      <div className="text-sm font-medium text-brand">
+                        {n.category}
+                      </div>
+                    )}
 
                     <div className="mt-1 font-semibold group-hover:text-brand">
                       {n.title}
                     </div>
 
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted">
-                      {n.summary}
-                    </p>
+                    {n.summary && (
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-muted">
+                        {n.summary}
+                      </p>
+                    )}
                   </Link>
                 </li>
               ))}
@@ -260,40 +281,10 @@ export default async function Home() {
         </Link>
       </section>
 
-      {/* Closing call to action */}
-      <section className="wrap pb-12 md:pb-24">
-        <div className="on-dark flex flex-col-reverse items-center gap-6 rounded-3xl bg-brand-dark p-6 text-center text-white sm:p-8 md:flex-row md:justify-between md:gap-10 md:p-12 md:text-left">
-          <div className="w-full md:w-auto">
-            <h2 className="mx-auto max-w-xl font-display text-2xl font-bold leading-tight sm:text-3xl md:mx-0 md:text-4xl">
-              Optometrist, student or practitioner in Manipur? Join MOA.
-            </h2>
-
-            <div className="mt-6 flex justify-center md:justify-start [&>a]:w-full sm:[&>a]:w-auto">
-              <Cta href="/membership" variant="mint">
-                Become a member
-              </Cta>
-            </div>
-          </div>
-
-          {/* MOA logo */}
-          <div className="flex shrink-0 items-center justify-center md:pr-6">
-            <Image
-              src="/logo1.png"
-              alt="Manipur Optometrist Association"
-              width={240}
-              height={240}
-              className="h-28 w-28 object-contain sm:h-40 sm:w-40 md:h-60 md:w-60"
-            />
-          </div>
-        </div>
-      </section>
-
       {/* Gallery banner (fades from one photo to the next), full width */}
-      {/* Gallery banner (fades from one photo to the next) */}
-<section className="w-full pb-6 md:pb-16">
-  <GalleryBanner photos={bannerPhotos} />
-</section>
-      
+      <section className="w-full pb-6 md:pb-16">
+        <GalleryBanner photos={bannerPhotos} {...banner} />
+      </section>
     </>
   );
 }

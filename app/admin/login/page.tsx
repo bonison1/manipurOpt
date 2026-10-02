@@ -1,10 +1,9 @@
-// Path: app/admin/login/page.tsx
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Card } from '@/components/ui';
 import RefreshOnShow from '@/components/RefreshOnShow';
 import { createSupabaseServer } from '@/lib/auth/supabase-server';
-import { checkIsAdmin } from '@/lib/auth/is-admin';
+import { resolveRole, HOME } from '@/lib/auth/resolve-home';
 import LoginForm from './LoginForm';
 
 export const dynamic = 'force-dynamic';
@@ -24,12 +23,17 @@ export default async function AdminLoginPage({
 }) {
   const { next } = await searchParams;
 
-  // Already logged in as an admin? Skip the login form. They stay logged in until they press Sign out.
+  // Already logged in? Admins go to /admin, members go to their dashboard.
   const supabase = await createSupabaseServer();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user && (await checkIsAdmin(supabase, user.email))) redirect(safeNext(next));
+
+  if (user) {
+    const role = await resolveRole(supabase, user.email);
+    if (role === 'admin') redirect(safeNext(next));
+    if (role === 'member') redirect(HOME.member);
+  }
 
   return (
     <div className="container py-16">
