@@ -3,24 +3,27 @@
 
 import Link from 'next/link';
 import { useEffect, useState, useTransition } from 'react';
-import { trackApplication } from '../actions';
-import type { TrackedApplication } from '../constants';
 import PayButton from '../PayButton';
 import { getProofStatus, type ProofStatus } from '../payment-actions';
 import StatusBadge from '@/components/StatusBadge';
 import { ErrorNote, inputCls, labelCls, linkCls } from '@/components/form-ui';
 import { formatDate, inr } from '@/lib/format';
+import { trackAny } from './track-actions';
+import type { OwnRegistration, TrackedItem } from './track-types';
 
 const primaryBtn =
   'inline-flex items-center justify-center rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60';
 
-function headline(a: TrackedApplication, proofSubmitted: boolean) {
-  if (a.status === 'approved') return 'Your membership has been approved.';
-  if (a.status === 'rejected') return 'Your application was not approved.';
+function headline(a: TrackedItem, proofSubmitted: boolean) {
+  const isMembership = a.kind === 'membership';
+  if (a.status === 'approved')
+    return isMembership ? 'Your membership has been approved.' : 'Your registration has been approved.';
+  if (a.status === 'rejected')
+    return isMembership ? 'Your application was not approved.' : 'Your registration was not approved.';
   if (a.payment_status === 'unpaid' && proofSubmitted)
     return 'Payment proof received. We will verify it shortly.';
   if (a.payment_status === 'unpaid') return 'Complete your payment so the review can begin.';
-  return 'Payment received. Your application is waiting for admin review.';
+  return `Payment received. Your ${isMembership ? 'application' : 'registration'} is waiting for admin review.`;
 }
 
 type Member = { applicationNo: string; email: string; isDraft: boolean } | null;
@@ -28,28 +31,33 @@ type Member = { applicationNo: string; email: string; isDraft: boolean } | null;
 export default function TrackForm({
   member = null,
   signedIn = false,
+  registrations = [],
 }: {
   /** Application the visitor may see without typing anything (logged in / resumed draft). */
   member?: Member;
   signedIn?: boolean;
+  /** Institute / student / clinic registrations tied to the logged-in email. */
+  registrations?: OwnRegistration[];
 }) {
   const [isPending, startTransition] = useTransition();
-  const [app, setApp] = useState<TrackedApplication | null>(null);
+  const [app, setApp] = useState<TrackedItem | null>(null);
   const [proof, setProof] = useState<ProofStatus>({ status: 'none' });
   const [error, setError] = useState('');
   const [creds, setCreds] = useState({ no: member?.applicationNo ?? '', email: member?.email ?? '' });
 
   // Members see their own status straight away; others (or anyone who asks) get the form.
   const autoTrack = !!member && !member.isDraft;
-  const [showManual, setShowManual] = useState(!member);
+  const hasOwn = !!member || registrations.length > 0;
+  const [showManual, setShowManual] = useState(!hasOwn);
   const [autoFailed, setAutoFailed] = useState(false);
 
   // A proof counts as "submitted" while pending or once approved
   const proofSubmitted = proof.status === 'pending' || proof.status === 'approved';
 
   function lookup(no: string, email: string, fromLogin = false) {
+    setCreds({ no, email });
     startTransition(async () => {
-      const result = await trackApplication(no, email);
+      const result = await trackAny(no, email);
       if (result.ok && result.application) {
         const p = await getProofStatus(no, email).catch(() => ({ status: 'none' }) as ProofStatus);
         setApp(result.application);
@@ -76,17 +84,19 @@ export default function TrackForm({
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const no = String(fd.get('application_no') ?? '');
-    const email = String(fd.get('email') ?? '');
-    setCreds({ no, email });
-    lookup(no, email);
+    lookup(String(fd.get('application_no') ?? ''), String(fd.get('email') ?? ''));
   }
 
+  const isMembership = app?.kind === 'membership';
   const feePaid = app?.payment_status === 'paid';
 
   const steps = app
     ? [
-        { label: 'Application submitted', done: true, detail: formatDate(app.created_at) },
+        {
+          label: isMembership ? 'Application submitted' : 'Registration submitted',
+          done: true,
+          detail: formatDate(app.created_at),
+        },
         {
           label: 'Fee paid',
           done: feePaid || proofSubmitted,
@@ -118,11 +128,11 @@ export default function TrackForm({
         </div>
       )}
 
-      {/* ── Logged in, but no application found for this email ── */}
-      {signedIn && !member && (
+      {/* ── Logged in, but nothing found for this email ── */}
+      {signedIn && !hasOwn && (
         <p className="rounded-2xl bg-tint px-4 py-3 text-sm">
-          We couldn&apos;t find an application for your account email. Enter the registration number and
-          email of your application below, or{' '}
+          We couldn&apos;t find an application or registration for your account email. Enter the reference
+          number and email below, or{' '}
           <Link href="/membership/apply" className={linkCls}>
             start a new application
           </Link>
@@ -146,12 +156,34 @@ export default function TrackForm({
         </div>
       )}
 
+      {/* ── Institute / student / clinic registrations on the logged-in email ── */}
+      {registrations.length > 0 && (
+        <div className="grid gap-2">
+          <p className="text-sm font-semibold">Your registrations</p>
+          <ul className="grid gap-2">
+            {registrations.map((r) => (
+              <li key={r.referenceNo}>
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => lookup(r.referenceNo, r.email)}
+                  className="flex w-full flex-wrap items-center justify-between gap-2 rounded-2xl border border-line px-4 py-3 text-left text-sm transition-colors hover:border-brand hover:bg-tint disabled:opacity-60"
+                >
+                  <span className="font-mono font-bold">{r.referenceNo}</span>
+                  <span className="text-muted">{r.title}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {loadingOwn && <p className="text-sm text-muted">Loading your application…</p>}
 
-      {/* ── Manual lookup (registration number + email) ── */}
-      {member && !showManual ? (
+      {/* ── Manual lookup (reference number + email) ── */}
+      {hasOwn && !showManual ? (
         <button type="button" onClick={() => setShowManual(true)} className={`justify-self-start text-sm ${linkCls}`}>
-          Look up a different application
+          Look up a different application or registration
         </button>
       ) : (
         <form onSubmit={onSubmit} className="grid gap-5">
@@ -161,11 +193,11 @@ export default function TrackForm({
             </p>
           )}
           <label className={labelCls}>
-            Registration number
+            Registration / reference number
             <input
               name="application_no"
               required
-              placeholder="MOA-2026-00001"
+              placeholder="MOA-2026-00001 or STU-2026-123456"
               autoCapitalize="characters"
               className={`${inputCls} uppercase`}
             />
@@ -185,6 +217,8 @@ export default function TrackForm({
 
       {/* Errors from the automatic lookup (form is shown above as a fallback) */}
       {error && autoFailed && <ErrorNote>{error}</ErrorNote>}
+      {/* Error from clicking one of "Your registrations" while the form is hidden */}
+      {error && !autoFailed && !showManual && <ErrorNote>{error}</ErrorNote>}
 
       {app && (
         <div className="grid gap-6 border-t border-line pt-8">
@@ -209,7 +243,8 @@ export default function TrackForm({
 
           <p className="font-display text-lg font-bold">{headline(app, proofSubmitted)}</p>
 
-          {app.status === 'approved' && (
+          {/* Member card / certificate only exists for memberships */}
+          {isMembership && app.status === 'approved' && (
             <Link href={signedIn ? '/membership/dashboard' : '/membership/login'} className={`text-sm ${linkCls}`}>
               {signedIn
                 ? 'Open your member dashboard to see your card and certificate number →'

@@ -82,12 +82,7 @@ export default function Membership() {
       >
         <Cta href="/membership/apply">Register now</Cta>
         <Cta href="/membership/login" variant="ghost">Member login</Cta>
-        <Link
-          href="/membership/track"
-          className="px-2 text-sm font-semibold text-brand hover:text-brand-dark hover:underline"
-        >
-          Track application
-        </Link>
+        
       </PageHero>
 
       {/* Benefits */}

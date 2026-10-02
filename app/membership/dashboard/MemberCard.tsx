@@ -9,6 +9,8 @@ export type CardData = {
   certificateNo: string;
   district: string;
   memberSince: string;
+  /** Label above the second detail. Defaults to DISTRICT (members); students pass e.g. BATCH. */
+  detailLabel?: string;
 };
 
 const W = 856; // credit-card ratio (85.6 x 54 mm)
@@ -16,7 +18,14 @@ const H = 540;
 const SANS = 'Arial, Helvetica, sans-serif';
 const MONO = '"Courier New", Courier, monospace';
 
-export default function MemberCard({ name, category, certificateNo, district, memberSince }: CardData) {
+export default function MemberCard({
+  name,
+  category,
+  certificateNo,
+  district,
+  memberSince,
+  detailLabel = 'DISTRICT',
+}: CardData) {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const displayName = name.toUpperCase();
@@ -142,7 +151,7 @@ export default function MemberCard({ name, category, certificateNo, district, me
 
             {/* details */}
             <text x="56" y="452" fontFamily={SANS} fontSize="14" letterSpacing="2" fill="#94a3b8">
-              DISTRICT
+              {detailLabel}
             </text>
             <text x="56" y="482" fontFamily={SANS} fontSize="24" fontWeight="700" fill="#ffffff">
               {district}

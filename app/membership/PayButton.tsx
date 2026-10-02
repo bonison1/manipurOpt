@@ -2,17 +2,17 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { getProofStatus, submitPaymentProof, type ProofStatus } from './payment-actions';
 import { inr } from '@/lib/format';
 
-// CHANGE: put your real details here (or move to constants.ts / env vars).
 const PAYMENT = {
-  qrImage: '/payment-qr.png', // place the file in /public
-  upiId: 'yourname@upi',
-  accountName: 'Your Organisation Name',
-  bankName: 'Your Bank',
-  accountNumber: '0000000000',
-  ifsc: 'ABCD0123456',
+  upiId: '8257970103m2@pnb',
+  merchantName: 'Safesight Eye Care',
+  accountName: 'SAFE-SIGHT EYE CARE',
+  accountNumber: '0353202100001054',
+  ifsc: 'PUNB0035320',
+  branch: 'THOUBAL',
 };
 
 const MAX_MB = 4;
@@ -85,6 +85,11 @@ export default function PayButton({ applicationNo, email, amount, onPaid }: Prop
     );
   }
 
+  const upiLink =
+    `upi://pay?pa=${encodeURIComponent(PAYMENT.upiId)}` +
+    `&pn=${encodeURIComponent(PAYMENT.merchantName)}` +
+    `&am=${Number(amount).toFixed(2)}&cu=INR&tn=${encodeURIComponent(applicationNo)}`;
+
   return (
     <>
       {proof.status === 'rejected' && (
@@ -119,19 +124,33 @@ export default function PayButton({ applicationNo, email, amount, onPaid }: Prop
               Amount to pay: <strong>{inr(amount)}</strong>
             </p>
 
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={PAYMENT.qrImage} alt="Payment QR code" className="mx-auto mb-2 h-48 w-48 object-contain" />
-            <p className="mb-4 text-center text-sm">
+            <p className="mb-1 text-center text-sm font-medium">{PAYMENT.merchantName}</p>
+            {/* Dynamic QR: encodes the UPI ID, the exact amount and the reference, so it changes per fee */}
+            <div className="mx-auto mb-2 w-fit rounded-xl border border-slate-200 bg-white p-3">
+              <QRCodeSVG value={upiLink} size={208} level="M" marginSize={0} />
+            </div>
+            <p className="mb-2 text-center text-sm">
               UPI ID: <CopyText value={PAYMENT.upiId} />
             </p>
+
+            {/* Phone users can't scan their own screen, so give them a direct UPI link */}
+            <a
+              href={upiLink}
+              className="mx-auto mb-4 block w-fit rounded-xl border border-[#0d9488] px-4 py-2 text-sm font-semibold text-[#0d9488] md:hidden"
+            >
+              Pay with UPI app
+            </a>
 
             <div className="mb-5 rounded-xl border border-slate-200 p-3 text-sm">
               <p className="mb-2 font-medium">Or pay by bank transfer</p>
               <Row label="Account name" value={PAYMENT.accountName} />
-              <Row label="Bank" value={PAYMENT.bankName} />
               <Row label="Account no." value={PAYMENT.accountNumber} copy />
               <Row label="IFSC" value={PAYMENT.ifsc} copy />
+              <Row label="Branch" value={PAYMENT.branch} />
               <Row label="Reference" value={applicationNo} copy />
+              <p className="mt-2 text-xs text-slate-500">
+                Add this reference in the payment remarks so we can match your payment.
+              </p>
             </div>
 
             <form onSubmit={onSubmit} className="grid gap-3">

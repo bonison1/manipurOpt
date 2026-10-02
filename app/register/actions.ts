@@ -1,3 +1,4 @@
+// Path: app/register/actions.ts
 'use server';
 
 import { randomInt } from 'node:crypto';
@@ -12,6 +13,10 @@ import {
 
 const TABLE = 'registrations';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const DUP_EMAIL_MSG =
+  'This email is already registered with MOA. Log in or use "Track application" to see its status.';
+const DUP_PHONE_MSG = 'This phone number is already registered with MOA.';
 
 export async function submitRegistration(_prev: RegState, formData: FormData): Promise<RegState> {
   // Honeypot: bots fill it, people never see it. Pretend it worked (no fee, no payment button).
@@ -50,20 +55,22 @@ export async function submitRegistration(_prev: RegState, formData: FormData): P
 
   const db = createServiceClient();
 
-  // Friendly duplicate check (the unique index is the real guard).
-  const { data: existing } = await db
-    .from(TABLE)
-    .select('reference_no')
-    .eq('type', type)
+  // Friendly duplicate check across ALL forms (membership + every registration type).
+  // contact_registry is the shared table; the DB trigger is the real guard.
+  // NOTE: never echo the existing reference number back, it works as a login secret.
+  const { data: dupEmail } = await db
+    .from('contact_registry')
+    .select('id')
     .eq('email', values.email)
     .maybeSingle();
-  if (existing) {
-    return {
-      ok: false,
-      error: `This email is already registered (reference ${existing.reference_no}).`,
-      values,
-    };
-  }
+  if (dupEmail) return { ok: false, error: DUP_EMAIL_MSG, values };
+
+  const { data: dupPhone } = await db
+    .from('contact_registry')
+    .select('id')
+    .eq('phone', values.phone)
+    .maybeSingle();
+  if (dupPhone) return { ok: false, error: DUP_PHONE_MSG, values };
 
   const row: Record<string, unknown> = { type, ...values, fee_amount: cfg.fee };
   if (row.admission_year) row.admission_year = Number(row.admission_year);
@@ -76,10 +83,14 @@ export async function submitRegistration(_prev: RegState, formData: FormData): P
     if (!error) return { ok: true, referenceNo, email: values.email, feeAmount: cfg.fee };
 
     if (error.code === '23505') {
-      if (String(error.message).includes('registrations_type_email_key')) {
-        return { ok: false, error: 'This email is already registered.', values };
+      const msg = String(error.message);
+      if (msg.includes('DUPLICATE_EMAIL') || msg.includes('registrations_type_email_key')) {
+        return { ok: false, error: DUP_EMAIL_MSG, values };
       }
-      continue;
+      if (msg.includes('DUPLICATE_PHONE')) {
+        return { ok: false, error: DUP_PHONE_MSG, values };
+      }
+      continue; // reference-number collision: try a new number
     }
     console.error('registration insert failed', error);
     break;

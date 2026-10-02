@@ -10,8 +10,11 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { formatDate, inr } from '@/lib/format';
 import { memberLogout } from '../auth-actions';
 import PayButton from '../PayButton';
+import { getProofStatus, type ProofStatus } from '../payment-actions';
 import MemberCard from './MemberCard';
 import CreatePasswordModal from './CreatePasswordModal';
+import { CreateRegistrationPasswordModal } from './CreateRegistrationPasswordModal';
+import RegistrationSection, { type RegistrationRow } from './RegistrationSection';
 import RefreshOnShow from '../RefreshOnShow';
 
 export const dynamic = 'force-dynamic';
@@ -52,9 +55,10 @@ const dateOnly = (iso: string | null) =>
       })
     : '—';
 
-function headline(m: Member) {
+function headline(m: Member, proofSubmitted: boolean) {
   if (m.status === 'approved') return 'Your membership is approved. Welcome to MOA!';
   if (m.status === 'rejected') return 'Your application was not approved.';
+  if (m.payment_status === 'unpaid' && proofSubmitted) return 'Payment proof received. We will verify it shortly.';
   if (m.payment_status === 'unpaid') return 'Complete your payment so the review can begin.';
   return 'Payment received. Your application is waiting for admin review.';
 }
@@ -91,6 +95,18 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** One block per institute / student / clinic registration on this email. */
+function Registrations({ rows }: { rows: RegistrationRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <>
+      {rows.map((r) => (
+        <RegistrationSection key={r.reference_no} r={r} />
+      ))}
+    </>
+  );
+}
+
 export default async function MemberDashboard() {
   const supabase = await createSupabaseServer();
   const {
@@ -114,11 +130,15 @@ export default async function MemberDashboard() {
     );
   }
 
-  const { data, error } = await createServiceClient()
-    .from('membership_applications')
-    .select(COLUMNS)
-    .eq('email', user.email.toLowerCase())
-    .maybeSingle();
+  const email = user.email.toLowerCase();
+  const db = createServiceClient();
+
+  const [memberRes, regRes] = await Promise.all([
+    db.from('membership_applications').select(COLUMNS).eq('email', email).maybeSingle(),
+    db.from('registrations').select('*').eq('email', email).order('created_at', { ascending: true }),
+  ]);
+
+  const { data, error } = memberRes;
 
   if (error) {
     console.error('dashboard load failed:', error);
@@ -134,23 +154,51 @@ export default async function MemberDashboard() {
     );
   }
 
+  if (regRes.error) console.error('dashboard registrations load failed:', regRes.error);
+  const regs = (regRes.data ?? []) as (RegistrationRow & { password_set?: boolean | null })[];
+
   const m = data as Member | null;
 
   // Signed in with date of birth and no password yet -> ask them to create one
   const passwordModal = m && !m.password_set ? <CreatePasswordModal /> : null;
 
-  if (!m) {
+  // Registration-only users (signed in with a reference number) -> same prompt, own flag
+  const registrationPasswordModal =
+    !m && regs.length > 0 && !regs.some((r) => r.password_set) ? <CreateRegistrationPasswordModal /> : null;
+
+  // Nothing at all for this email
+  if (!m && regs.length === 0) {
     return (
       <Shell title="Member dashboard" subtitle={`Signed in as ${user.email}`}>
         <Card>
-          <p className="text-slate-700">We could not find a membership application for this email address.</p>
+          <p className="text-slate-700">We could not find an application or registration for this email address.</p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <Link href="/membership/apply" className="font-semibold text-[#0d9488] hover:underline">
               Apply for membership →
             </Link>
+            <Link href="/register" className="font-semibold text-[#0d9488] hover:underline">
+              Register an institute, student or clinic →
+            </Link>
             <SignOut />
           </div>
         </Card>
+      </Shell>
+    );
+  }
+
+  // Registrations only (no membership application on this email)
+  if (!m) {
+    const first = regs[0];
+    return (
+      <Shell title="Member dashboard" subtitle={`Welcome, ${first.name}`}>
+        {registrationPasswordModal}
+        <div className="grid gap-8">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span className="text-slate-500">{user.email}</span>
+            <SignOut />
+          </div>
+          <Registrations rows={regs} />
+        </div>
       </Shell>
     );
   }
@@ -186,20 +234,30 @@ export default async function MemberDashboard() {
               </Link>
             </div>
           </Card>
+          <Registrations rows={regs} />
         </div>
       </Shell>
     );
   }
 
   const approved = m.status === 'approved';
+
+  // A submitted payment proof counts as "fee paid" (pending verification) or once approved
+  const proof = await getProofStatus(m.application_no, m.email).catch(() => ({ status: 'none' }) as ProofStatus);
+  const proofSubmitted = proof.status === 'pending' || proof.status === 'approved';
   const memberSince = dateOnly(m.reviewed_at);
 
   const steps = [
     { label: 'Application submitted', done: true, detail: formatDate(m.created_at) },
     {
       label: 'Fee paid',
-      done: m.payment_status === 'paid',
-      detail: m.payment_status === 'paid' ? inr(m.fee_amount) : `${inr(m.fee_amount)} due`,
+      done: m.payment_status === 'paid' || proofSubmitted,
+      detail:
+        m.payment_status === 'paid'
+          ? inr(m.fee_amount)
+          : proofSubmitted
+            ? `${inr(m.fee_amount)} · proof submitted, awaiting verification`
+            : `${inr(m.fee_amount)} due`,
     },
     {
       label: 'Admin review',
@@ -227,12 +285,15 @@ export default async function MemberDashboard() {
               </p>
             </div>
             <div className="flex gap-2">
-              <StatusBadge value={m.payment_status} />
+              <StatusBadge
+                value={m.payment_status}
+                label={m.payment_status === 'unpaid' && proofSubmitted ? 'Verifying' : undefined}
+              />
               <StatusBadge value={m.status} label={m.status === 'pending' ? 'Under review' : undefined} />
             </div>
           </div>
 
-          <p className="mt-5 font-semibold text-[#073b66]">{headline(m)}</p>
+          <p className="mt-5 font-semibold text-[#073b66]">{headline(m, proofSubmitted)}</p>
 
           {!approved && (
             <ol className="mt-5 grid gap-3">
@@ -320,6 +381,9 @@ export default async function MemberDashboard() {
             <Detail label="Applied on" value={dateOnly(m.created_at)} />
           </dl>
         </Card>
+
+        {/* Institute / student / clinic registrations on the same email */}
+        <Registrations rows={regs} />
       </div>
     </Shell>
   );

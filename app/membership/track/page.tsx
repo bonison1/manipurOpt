@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function TrackPage() {
-  const { signedInEmail, application } = await getTrackIdentity();
+  const { signedInEmail, application, registrations } = await getTrackIdentity();
 
   return (
     <>
@@ -21,12 +21,12 @@ export default async function TrackPage() {
         subtitle={
           signedInEmail
             ? `Signed in as ${signedInEmail}.`
-            : 'Log in to see your status automatically, or enter your registration number and email.'
+            : 'Membership, institute, student or clinic: log in to see your status automatically, or enter your reference number and email.'
         }
       />
       <PageBody width="max-w-2xl">
         <Panel>
-          <TrackForm member={application} signedIn={!!signedInEmail} />
+          <TrackForm member={application} signedIn={!!signedInEmail} registrations={registrations} />
         </Panel>
       </PageBody>
     </>

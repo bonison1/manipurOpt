@@ -12,6 +12,7 @@ import {
   BuildingStorefrontIcon,
   AcademicCapIcon,
   ChevronDownIcon,
+  ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline';
 import { memberLogout } from '@/app/membership/auth-actions';
 import { logout as adminLogout } from '@/app/admin/login/actions';
@@ -22,6 +23,7 @@ const membershipMenu = [
   ['Student Registration', '/register/student', AcademicCapIcon],
   ['Clinic Registration', '/register/clinic', BuildingStorefrontIcon],
   ['Institution Registration', '/register/institute', BuildingOfficeIcon], // segment must match RegType: 'institute'
+  ['Track Application', '/membership/track', ClipboardDocumentCheckIcon],
 ] as const;
 
 type NavItem = {
