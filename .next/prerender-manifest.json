@@ -1,11 +1,1 @@
-{
-  "version": 4,
-  "routes": {},
-  "dynamicRoutes": {},
-  "notFoundRoutes": [],
-  "preview": {
-    "previewModeId": "d12d69a5aa995fac965dcdc1d2a0c319",
-    "previewModeSigningKey": "ed42653ff2368eab98dd586c7f344b4560561a8dd764936a0fa257e9660d3ae2",
-    "previewModeEncryptionKey": "0409506c25251e147ab8b135128cd0ca3adc4a77f13d4124ac4cf2e0fbfdb991"
-  }
-}
+{"version":4,"routes":{"/register/institute":{},"/register/student":{},"/register/clinic":{}},"dynamicRoutes":{"/register/[type]":{"dataRoute":null,"dataRouteRegex":null,"fallback":null,"fallbackRevalidate":false,"fallbackSourceRoute":"/register/[type]","routeRegex":"^\\/register\\/([^/]+?)(?:\\/)?$","allowHeader":[]}},"notFoundRoutes":[],"preview":{"previewModeId":"3e519da68a79907b8668d4a45c0ece61","previewModeSigningKey":"47da29309ada9d42d280676600832d40099ba726363c6c3039230b0b88e5592c","previewModeEncryptionKey":"2884d4e998980af7e7969e854606e41daa3e8e4089a136111a50cacf4c5785a0"}}

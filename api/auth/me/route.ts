@@ -1,3 +1,4 @@
+// Path: app/api/auth/me/route.ts
 import { NextResponse } from 'next/server';
 import { getMe } from '@/lib/auth/get-me';
 

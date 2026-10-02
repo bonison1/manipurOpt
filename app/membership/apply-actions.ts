@@ -4,13 +4,13 @@
 import { redirect } from 'next/navigation';
 import { createServiceClient } from '@/lib/supabase/server';
 import {
-  CATEGORIES,
   DISTRICTS,
   DOCS_BUCKET,
-  FEES,
   GENDERS,
   HIGHEST_QUALIFICATIONS,
   MAX_DOCS_BYTES,
+  MEMBERSHIP_FEE,
+  MEMBERSHIP_LABEL,
   type FormState,
   type ResumeState,
   type StepResult,
@@ -25,6 +25,9 @@ const TABLE = 'membership_applications';
 const SESSION_ENDED =
   'Your session has ended. Log in with your email and date of birth to carry on.';
 
+const ALREADY_APPLIED =
+  'You have already applied. Use "Track your application" to check its status, or log in to continue an unfinished application.';
+
 const clean = (v: unknown) => String(v ?? '').trim();
 
 /* ------------------------------ helpers ------------------------------ */
@@ -36,12 +39,17 @@ async function currentDraft() {
   return data && data.is_draft ? data : null;
 }
 
-function conflictErrors(error: { code?: string; message?: string }): Record<string, string> | null {
+function conflictErrors(
+  error: { code?: string; message?: string; details?: string },
+): Record<string, string> | null {
   if (error.code !== '23505') return null;
-  const m = error.message ?? '';
-  if (/aadhaar/i.test(m)) return { aadhaar: 'This Aadhaar number is already registered.' };
-  if (/email/i.test(m)) return { email: 'This email is already used for another application.' };
-  return {};
+  const m = `${error.message ?? ''} ${error.details ?? ''}`;
+  if (/aadhaar/i.test(m)) return { aadhaar: 'An application with this Aadhaar number already exists.' };
+  if (/email/i.test(m)) return { email: 'An application with this email already exists.' };
+  if (/phone/i.test(m)) return { phone: 'An application with this WhatsApp number already exists.' };
+  // Unknown unique rule: show the generic error (and log the real reason) instead of an empty "correct the fields"
+  console.error('unique violation:', error);
+  return null;
 }
 
 function validateStep(step: number, get: (k: string) => string, hasAadhaar: boolean) {
@@ -52,7 +60,7 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
     const full_name = get('full_name');
     const date_of_birth = get('date_of_birth');
     const gender = get('gender');
-    const phone = get('phone').replace(/[\s-]/g, '');
+    const phone = get('phone').replace(/[\s-]/g, '').replace(/^\+91/, '');
     const email = get('email').toLowerCase();
 
     if (full_name.length < 2) errors.full_name = 'Please enter your full name.';
@@ -65,7 +73,7 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
     }
 
     if (!(GENDERS as readonly string[]).includes(gender)) errors.gender = 'Please select your gender.';
-    if (!/^(\+91)?[6-9]\d{9}$/.test(phone)) errors.phone = 'Enter a valid 10-digit WhatsApp number.';
+    if (!/^[6-9]\d{9}$/.test(phone)) errors.phone = 'Enter a valid 10-digit WhatsApp number.';
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.email = 'Enter a valid email address.';
 
     Object.assign(values, { full_name, date_of_birth, gender, phone, email });
@@ -73,7 +81,6 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
 
   if (step === 1) {
     const aadhaar = get('aadhaar').replace(/\s/g, '');
-    const voter_id = get('voter_id').toUpperCase();
     const address = get('address');
     const city = get('city');
     const district = get('district');
@@ -83,7 +90,6 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
     const current_working_details = get('current_working_details');
     const practitioner = get('is_independent_practitioner');
     const professional_reg_no = get('professional_reg_no') || null;
-    const membership_category = get('membership_category');
 
     if (aadhaar) {
       if (!/^\d{12}$/.test(aadhaar)) errors.aadhaar = 'Aadhaar must be exactly 12 digits.';
@@ -92,7 +98,6 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
       errors.aadhaar = 'Please enter your Aadhaar number.';
     }
 
-    if (voter_id.length < 5 || voter_id.length > 30) errors.voter_id = 'Enter a valid Voter ID number.';
     if (address.length < 5) errors.address = 'Please enter your address.';
     if (!city) errors.city = 'Please enter your city / town / village.';
     if (!(DISTRICTS as readonly string[]).includes(district)) errors.district = 'Please select a district.';
@@ -103,12 +108,8 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
     if (practitioner !== 'yes' && practitioner !== 'no') {
       errors.is_independent_practitioner = 'Please choose an option.';
     }
-    if (!(CATEGORIES as readonly string[]).includes(membership_category)) {
-      errors.membership_category = 'Please select a membership category.';
-    }
 
     Object.assign(values, {
-      voter_id,
       address,
       city,
       district,
@@ -118,8 +119,9 @@ function validateStep(step: number, get: (k: string) => string, hasAadhaar: bool
       current_working_details,
       is_independent_practitioner: practitioner === 'yes',
       professional_reg_no,
-      membership_category,
-      fee_amount: FEES[membership_category as keyof typeof FEES] ?? null,
+      // One flat practitioner fee: no category choice any more
+      membership_category: MEMBERSHIP_LABEL,
+      fee_amount: MEMBERSHIP_FEE,
     });
   }
 
@@ -179,36 +181,57 @@ export async function saveStep(step: number, formData: FormData): Promise<StepRe
 
   // ---- First step of a brand-new application: create the draft ----
   if (!draft) {
-    const { data: existing } = await db
+    // Already applied? Check email, then WhatsApp number, before creating anything.
+    const byEmail = await db
       .from(TABLE)
       .select('is_draft')
       .eq('email', values.email as string)
+      .limit(1)
       .maybeSingle();
+    const byPhone = byEmail.data
+      ? null
+      : await db
+          .from(TABLE)
+          .select('is_draft')
+          .eq('phone', values.phone as string)
+          .limit(1)
+          .maybeSingle();
 
+    const existing = byEmail.data ?? byPhone?.data ?? null;
     if (existing) {
+      const field = byEmail.data ? 'email' : 'phone';
+      const what = field === 'email' ? 'email address' : 'WhatsApp number';
       return existing.is_draft
         ? {
             ok: false,
-            message: 'You have already started an application with this email. Log in to continue it.',
-            errors: { email: 'An unfinished application exists for this email.' },
+            message: `You have already started an application with this ${what}. Log in to continue it.`,
+            errors: { [field]: `An unfinished application exists for this ${what}.` },
             resume: true,
           }
         : {
             ok: false,
-            message: 'An application with this email already exists.',
-            errors: { email: 'This email has already been used to apply. Use the track page to check it.' },
+            message: `You have already applied with this ${what}. Use "Track your application" to check its status.`,
+            errors: { [field]: `Already applied with this ${what}.` },
           };
     }
 
     const { data, error } = await db
       .from(TABLE)
-      .insert({ ...values, is_draft: true, draft_step: 1, declaration_accepted: null })
+      .insert({
+        ...values,
+        // set from the start so the NOT NULL columns are filled before step 2 is saved
+        membership_category: MEMBERSHIP_LABEL,
+        fee_amount: MEMBERSHIP_FEE,
+        is_draft: true,
+        draft_step: 1,
+        declaration_accepted: null,
+      })
       .select('id, application_no')
       .single();
 
     if (error || !data) {
       const conflict = error ? conflictErrors(error) : null;
-      if (conflict) return { ok: false, message: 'Please correct the highlighted fields.', errors: conflict };
+      if (conflict) return { ok: false, message: ALREADY_APPLIED, errors: conflict };
       console.error('draft insert failed:', error);
       return { ok: false, message: 'Something went wrong while saving. Please try again.' };
     }
@@ -230,7 +253,7 @@ export async function saveStep(step: number, formData: FormData): Promise<StepRe
 
   if (error) {
     const conflict = conflictErrors(error);
-    if (conflict) return { ok: false, message: 'Please correct the highlighted fields.', errors: conflict };
+    if (conflict) return { ok: false, message: ALREADY_APPLIED, errors: conflict };
     console.error('draft update failed:', error);
     return { ok: false, message: 'Something went wrong while saving. Please try again.' };
   }
@@ -325,14 +348,14 @@ export async function finalizeApplication(formData: FormData): Promise<FormState
     return { ok: false, message: 'Some steps are incomplete. Please go back and finish them.' };
   }
 
-  const feeAmount = FEES[draft.membership_category as keyof typeof FEES];
-  if (!feeAmount) return { ok: false, message: 'Please choose a membership category.' };
+  const feeAmount = MEMBERSHIP_FEE;
 
   const { error } = await createServiceClient()
     .from(TABLE)
     .update({
       is_draft: false,
       declaration_accepted: true,
+      membership_category: MEMBERSHIP_LABEL,
       fee_amount: feeAmount,
       // keep the older dashboard / admin columns filled in
       qualification: draft.highest_qualification,

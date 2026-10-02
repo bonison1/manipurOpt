@@ -12,12 +12,11 @@ import {
   saveStep,
 } from './apply-actions';
 import {
-  CATEGORIES,
   DISTRICTS,
-  FEES,
   GENDERS,
   HIGHEST_QUALIFICATIONS,
   MAX_DOCS_BYTES,
+  MEMBERSHIP_FEE,
   STEP_FIELDS,
   type DraftData,
   type FormState,
@@ -56,7 +55,6 @@ const LABELS: Record<string, string> = {
   phone: 'WhatsApp number',
   email: 'Email',
   aadhaar: 'Aadhaar',
-  voter_id: 'Voter ID',
   address: 'Address',
   city: 'City / Town / Village',
   district: 'District',
@@ -66,7 +64,6 @@ const LABELS: Record<string, string> = {
   current_working_details: 'Current working details',
   is_independent_practitioner: 'Independent practitioner',
   professional_reg_no: 'Registration number',
-  membership_category: 'Membership category',
   bo_university: 'B.Optom university',
   bo_college: 'B.Optom college',
   college_address: 'College address',
@@ -404,7 +401,6 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
     if (!file) return true; // keep the file that was already uploaded
 
     const up = await createDocumentUpload();
-    // FIX: check every field explicitly (works with or without TypeScript "strict")
     if (!up.ok || !up.bucket || !up.path || !up.token) {
       applyServerFailure(up);
       return false;
@@ -498,7 +494,7 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
       <SuccessCard
         applicationNo={done.applicationNo}
         email={done.email ?? ''}
-        feeAmount={done.feeAmount ?? 0}
+        feeAmount={done.feeAmount ?? MEMBERSHIP_FEE}
       />
     );
   }
@@ -562,9 +558,6 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
   );
 
   const section = (i: number) => `gap-5 md:grid-cols-2 ${step === i ? 'grid' : 'hidden'}`;
-  const chosenCategory = summary.find(([k]) => k === 'membership_category')?.[1];
-  const fee =
-    chosenCategory && chosenCategory in FEES ? FEES[chosenCategory as keyof typeof FEES] : undefined;
 
   return (
     <form ref={formRef} onSubmit={onSubmit} noValidate className="scroll-mt-24">
@@ -614,7 +607,13 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
 
       {/* ───────── Step 2: Identity, address & work ───────── */}
       <div ref={(el) => { sectionRefs.current[1] = el; }} className={section(1)}>
-        <Field name="aadhaar" label="Aadhaar Number" required={!initial?.aadhaarLast4} error={errors.aadhaar}>
+        <Field
+          name="aadhaar"
+          label="Aadhaar Number"
+          required={!initial?.aadhaarLast4}
+          error={errors.aadhaar}
+          className="md:col-span-2"
+        >
           <input
             name="aadhaar" inputMode="numeric" maxLength={12} pattern="[0-9]{12}" autoComplete="off"
             required={!initial?.aadhaarLast4}
@@ -626,7 +625,6 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
             aria-invalid={inv('aadhaar')} aria-describedby={desc('aadhaar')} className={inputCls}
           />
         </Field>
-        {txt('voter_id', 'Voter ID Number', { hint: 'permanent residency is mandatory', autoComplete: 'off' })}
 
         <Field name="address" label="Address / House No." required error={errors.address} className="md:col-span-2">
           <textarea
@@ -672,9 +670,8 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
         </fieldset>
 
         {txt('professional_reg_no', 'Professional Registration Number', {
-          hint: '(if any)', required: false, placeholder: 'Registration Number',
+          hint: '(if any)', required: false, placeholder: 'Registration Number', span: true,
         })}
-        {sel('membership_category', 'Membership Category', CATEGORIES, (c) => `${c} — ${inr(FEES[c as keyof typeof FEES])}`)}
       </div>
 
       {/* ───────── Step 3: Education ───────── */}
@@ -703,7 +700,7 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
           error={errors.documents_file} className="md:col-span-2"
         >
           <span className="text-xs font-normal text-muted">
-            Passport photo, Aadhaar, birth certificate, Voter ID, HS Science marksheet, all B.Optom
+            Passport photo, Aadhaar, birth certificate, HS Science marksheet, all B.Optom
             marksheets, internship completion certificate and B.Optom degree certificate — merged into
             a single PDF, up to 10MB.
           </span>
@@ -751,11 +748,10 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
           );
         })}
 
-        {fee ? (
-          <p className="rounded-2xl bg-tint px-4 py-3 text-sm">
-            Membership fee: <strong>{inr(fee)}</strong> — payable after you submit (QR / bank transfer, then upload the proof).
-          </p>
-        ) : null}
+        <p className="rounded-2xl bg-tint px-4 py-3 text-sm">
+          Membership fee: <strong>{inr(MEMBERSHIP_FEE)}</strong> — payable after you submit (QR / bank transfer, then
+          upload the proof).
+        </p>
 
         <div className="grid gap-2">
           <label className="flex items-start gap-3 text-sm font-normal">
@@ -764,9 +760,9 @@ export default function MembershipForm({ initial }: { initial?: DraftData | null
               className="mt-1 h-4 w-4 accent-brand"
             />
             <span>
-              I confirm that I am applying for Lifetime Membership of the association. I understand
-              that the membership fee is non-refundable and that my registration will be subject to
-              document verification and approval by the association.
+              I confirm that I am applying for membership of the association. I understand that the
+              membership fee is non-refundable and that my registration will be subject to document
+              verification and approval by the association.
             </span>
           </label>
           <FieldError id="declaration_accepted-error" message={errors.declaration_accepted} />

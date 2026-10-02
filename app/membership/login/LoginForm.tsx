@@ -180,7 +180,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
             Password
             <input name="password" type="password" required autoComplete="current-password" className={inputCls} />
           </label>
-          <div className="flex items-start justify-between gap-3">
+          {/* <div className="flex items-start justify-between gap-3">
             <p className="text-xs text-muted">
               No password yet? Use the “Date of birth” or “Reference no.” tab. You can create a password after
               logging in.
@@ -192,7 +192,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
             >
               Forgot password?
             </button>
-          </div>
+          </div> */}
         </div>
       )}
 

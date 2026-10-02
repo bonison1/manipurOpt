@@ -1,5 +1,3 @@
-export const CATEGORIES = ['Regular Member', 'Student Member', 'Associate Member'] as const;
-
 export const DISTRICTS = [
   'Bishnupur', 'Chandel', 'Churachandpur', 'Imphal East', 'Imphal West',
   'Jiribam', 'Kakching', 'Kamjong', 'Kangpokpi', 'Noney', 'Pherzawl',
@@ -7,12 +5,12 @@ export const DISTRICTS = [
   'Outside Manipur',
 ] as const;
 
-// PLACEHOLDER fees in INR. Replace with the approved MOA fee structure.
-export const FEES: Record<(typeof CATEGORIES)[number], number> = {
-  'Regular Member': 500,
-  'Student Member': 200,
-  'Associate Member': 300,
-};
+// Practitioner membership fee in INR (single flat fee, no categories).
+// Other registration fees (student, clinic, institute) live in app/register/config.ts
+export const MEMBERSHIP_FEE = 2000;
+
+// Stored in the database for practitioner applications (the column is kept for compatibility)
+export const MEMBERSHIP_LABEL = 'Practitioner';
 
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
 export type PaymentStatus = 'unpaid' | 'paid';
@@ -70,9 +68,8 @@ export const MAX_DOCS_BYTES = 10 * 1024 * 1024; // 10 MB (uploaded straight to s
 export const STEP_FIELDS = [
   ['full_name', 'date_of_birth', 'gender', 'phone', 'email'],
   [
-    'aadhaar', 'voter_id', 'address', 'city', 'district', 'state', 'pin_code', 'country',
+    'aadhaar', 'address', 'city', 'district', 'state', 'pin_code', 'country',
     'current_working_details', 'is_independent_practitioner', 'professional_reg_no',
-    'membership_category',
   ],
   ['bo_university', 'bo_college', 'college_address', 'bo_completion_date', 'highest_qualification'],
   ['documents_file'],
